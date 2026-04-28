@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		CBE34D832F9F7F5E00981B44 /* DriveAppTest Watch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = CBE34D632F9F7F5E00981B44 /* DriveAppTest Watch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		CBE34D372F9F7C7A00981B44 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -21,17 +25,83 @@
 			remoteGlobalIDString = CBE34D282F9F7C7A00981B44;
 			remoteInfo = DriveAppTest;
 		};
+		CBE34D702F9F7F5E00981B44 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CBE34D212F9F7C7A00981B44 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CBE34D622F9F7F5E00981B44;
+			remoteInfo = "DriveAppTest Watch Watch App";
+		};
+		CBE34D7A2F9F7F5E00981B44 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CBE34D212F9F7C7A00981B44 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CBE34D622F9F7F5E00981B44;
+			remoteInfo = "DriveAppTest Watch Watch App";
+		};
+		CBE34D812F9F7F5E00981B44 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CBE34D212F9F7C7A00981B44 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CBE34D622F9F7F5E00981B44;
+			remoteInfo = "DriveAppTest Watch Watch App";
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		CBE34D842F9F7F5E00981B44 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				CBE34D832F9F7F5E00981B44 /* DriveAppTest Watch Watch App.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		CBE34D292F9F7C7A00981B44 /* DriveAppTest.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DriveAppTest.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CBE34D362F9F7C7A00981B44 /* DriveAppTestTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DriveAppTestTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		CBE34D402F9F7C7A00981B44 /* DriveAppTestUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DriveAppTestUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		CBE34D632F9F7F5E00981B44 /* DriveAppTest Watch Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "DriveAppTest Watch Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		CBE34D6F2F9F7F5E00981B44 /* DriveAppTest Watch Watch AppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "DriveAppTest Watch Watch AppTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		CBE34D792F9F7F5E00981B44 /* DriveAppTest Watch Watch AppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "DriveAppTest Watch Watch AppUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		CBE34D962F9F813000981B44 /* Exceptions for "DriveAppTest" folder in "DriveAppTest" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = CBE34D282F9F7C7A00981B44 /* DriveAppTest */;
+		};
+		CBE34DA42F9F84D000981B44 /* Exceptions for "Managers" folder in "DriveAppTest Watch Watch App" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				ConnectivityManager.swift,
+				MotionManager.swift,
+			);
+			target = CBE34D622F9F7F5E00981B44 /* DriveAppTest Watch Watch App */;
+		};
+		CBE34DAA2F9F8E4C00981B44 /* Exceptions for "Managers" folder in "DriveAppTest" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				MotionManager.swift,
+			);
+			target = CBE34D282F9F7C7A00981B44 /* DriveAppTest */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		CBE34D2B2F9F7C7A00981B44 /* DriveAppTest */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				CBE34D962F9F813000981B44 /* Exceptions for "DriveAppTest" folder in "DriveAppTest" target */,
+			);
 			path = DriveAppTest;
 			sourceTree = "<group>";
 		};
@@ -43,6 +113,30 @@
 		CBE34D432F9F7C7A00981B44 /* DriveAppTestUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = DriveAppTestUITests;
+			sourceTree = "<group>";
+		};
+		CBE34D642F9F7F5E00981B44 /* DriveAppTest Watch Watch App */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "DriveAppTest Watch Watch App";
+			sourceTree = "<group>";
+		};
+		CBE34D722F9F7F5E00981B44 /* DriveAppTest Watch Watch AppTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "DriveAppTest Watch Watch AppTests";
+			sourceTree = "<group>";
+		};
+		CBE34D7C2F9F7F5E00981B44 /* DriveAppTest Watch Watch AppUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "DriveAppTest Watch Watch AppUITests";
+			sourceTree = "<group>";
+		};
+		CBE34D9C2F9F843400981B44 /* Managers */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				CBE34DAA2F9F8E4C00981B44 /* Exceptions for "Managers" folder in "DriveAppTest" target */,
+				CBE34DA42F9F84D000981B44 /* Exceptions for "Managers" folder in "DriveAppTest Watch Watch App" target */,
+			);
+			path = Managers;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -69,15 +163,40 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CBE34D602F9F7F5E00981B44 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CBE34D6C2F9F7F5E00981B44 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CBE34D762F9F7F5E00981B44 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		CBE34D202F9F7C7A00981B44 = {
 			isa = PBXGroup;
 			children = (
+				CBE34D9C2F9F843400981B44 /* Managers */,
 				CBE34D2B2F9F7C7A00981B44 /* DriveAppTest */,
 				CBE34D392F9F7C7A00981B44 /* DriveAppTestTests */,
 				CBE34D432F9F7C7A00981B44 /* DriveAppTestUITests */,
+				CBE34D642F9F7F5E00981B44 /* DriveAppTest Watch Watch App */,
+				CBE34D722F9F7F5E00981B44 /* DriveAppTest Watch Watch AppTests */,
+				CBE34D7C2F9F7F5E00981B44 /* DriveAppTest Watch Watch AppUITests */,
 				CBE34D2A2F9F7C7A00981B44 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -88,6 +207,9 @@
 				CBE34D292F9F7C7A00981B44 /* DriveAppTest.app */,
 				CBE34D362F9F7C7A00981B44 /* DriveAppTestTests.xctest */,
 				CBE34D402F9F7C7A00981B44 /* DriveAppTestUITests.xctest */,
+				CBE34D632F9F7F5E00981B44 /* DriveAppTest Watch Watch App.app */,
+				CBE34D6F2F9F7F5E00981B44 /* DriveAppTest Watch Watch AppTests.xctest */,
+				CBE34D792F9F7F5E00981B44 /* DriveAppTest Watch Watch AppUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -102,13 +224,16 @@
 				CBE34D252F9F7C7A00981B44 /* Sources */,
 				CBE34D262F9F7C7A00981B44 /* Frameworks */,
 				CBE34D272F9F7C7A00981B44 /* Resources */,
+				CBE34D842F9F7F5E00981B44 /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				CBE34D822F9F7F5E00981B44 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				CBE34D2B2F9F7C7A00981B44 /* DriveAppTest */,
+				CBE34D9C2F9F843400981B44 /* Managers */,
 			);
 			name = DriveAppTest;
 			packageProductDependencies = (
@@ -163,6 +288,74 @@
 			productReference = CBE34D402F9F7C7A00981B44 /* DriveAppTestUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		CBE34D622F9F7F5E00981B44 /* DriveAppTest Watch Watch App */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CBE34D8B2F9F7F5E00981B44 /* Build configuration list for PBXNativeTarget "DriveAppTest Watch Watch App" */;
+			buildPhases = (
+				CBE34D5F2F9F7F5E00981B44 /* Sources */,
+				CBE34D602F9F7F5E00981B44 /* Frameworks */,
+				CBE34D612F9F7F5E00981B44 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				CBE34D642F9F7F5E00981B44 /* DriveAppTest Watch Watch App */,
+			);
+			name = "DriveAppTest Watch Watch App";
+			packageProductDependencies = (
+			);
+			productName = "DriveAppTest Watch Watch App";
+			productReference = CBE34D632F9F7F5E00981B44 /* DriveAppTest Watch Watch App.app */;
+			productType = "com.apple.product-type.application";
+		};
+		CBE34D6E2F9F7F5E00981B44 /* DriveAppTest Watch Watch AppTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CBE34D8C2F9F7F5E00981B44 /* Build configuration list for PBXNativeTarget "DriveAppTest Watch Watch AppTests" */;
+			buildPhases = (
+				CBE34D6B2F9F7F5E00981B44 /* Sources */,
+				CBE34D6C2F9F7F5E00981B44 /* Frameworks */,
+				CBE34D6D2F9F7F5E00981B44 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				CBE34D712F9F7F5E00981B44 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				CBE34D722F9F7F5E00981B44 /* DriveAppTest Watch Watch AppTests */,
+			);
+			name = "DriveAppTest Watch Watch AppTests";
+			packageProductDependencies = (
+			);
+			productName = "DriveAppTest Watch Watch AppTests";
+			productReference = CBE34D6F2F9F7F5E00981B44 /* DriveAppTest Watch Watch AppTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		CBE34D782F9F7F5E00981B44 /* DriveAppTest Watch Watch AppUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CBE34D8D2F9F7F5E00981B44 /* Build configuration list for PBXNativeTarget "DriveAppTest Watch Watch AppUITests" */;
+			buildPhases = (
+				CBE34D752F9F7F5E00981B44 /* Sources */,
+				CBE34D762F9F7F5E00981B44 /* Frameworks */,
+				CBE34D772F9F7F5E00981B44 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				CBE34D7B2F9F7F5E00981B44 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				CBE34D7C2F9F7F5E00981B44 /* DriveAppTest Watch Watch AppUITests */,
+			);
+			name = "DriveAppTest Watch Watch AppUITests";
+			packageProductDependencies = (
+			);
+			productName = "DriveAppTest Watch Watch AppUITests";
+			productReference = CBE34D792F9F7F5E00981B44 /* DriveAppTest Watch Watch AppUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -184,6 +377,17 @@
 						CreatedOnToolsVersion = 26.0.1;
 						TestTargetID = CBE34D282F9F7C7A00981B44;
 					};
+					CBE34D622F9F7F5E00981B44 = {
+						CreatedOnToolsVersion = 26.0.1;
+					};
+					CBE34D6E2F9F7F5E00981B44 = {
+						CreatedOnToolsVersion = 26.0.1;
+						TestTargetID = CBE34D622F9F7F5E00981B44;
+					};
+					CBE34D782F9F7F5E00981B44 = {
+						CreatedOnToolsVersion = 26.0.1;
+						TestTargetID = CBE34D622F9F7F5E00981B44;
+					};
 				};
 			};
 			buildConfigurationList = CBE34D242F9F7C7A00981B44 /* Build configuration list for PBXProject "DriveAppTest" */;
@@ -203,6 +407,9 @@
 				CBE34D282F9F7C7A00981B44 /* DriveAppTest */,
 				CBE34D352F9F7C7A00981B44 /* DriveAppTestTests */,
 				CBE34D3F2F9F7C7A00981B44 /* DriveAppTestUITests */,
+				CBE34D622F9F7F5E00981B44 /* DriveAppTest Watch Watch App */,
+				CBE34D6E2F9F7F5E00981B44 /* DriveAppTest Watch Watch AppTests */,
+				CBE34D782F9F7F5E00981B44 /* DriveAppTest Watch Watch AppUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -223,6 +430,27 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		CBE34D3E2F9F7C7A00981B44 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CBE34D612F9F7F5E00981B44 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CBE34D6D2F9F7F5E00981B44 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CBE34D772F9F7F5E00981B44 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -253,6 +481,27 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CBE34D5F2F9F7F5E00981B44 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CBE34D6B2F9F7F5E00981B44 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CBE34D752F9F7F5E00981B44 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -265,6 +514,21 @@
 			isa = PBXTargetDependency;
 			target = CBE34D282F9F7C7A00981B44 /* DriveAppTest */;
 			targetProxy = CBE34D412F9F7C7A00981B44 /* PBXContainerItemProxy */;
+		};
+		CBE34D712F9F7F5E00981B44 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = CBE34D622F9F7F5E00981B44 /* DriveAppTest Watch Watch App */;
+			targetProxy = CBE34D702F9F7F5E00981B44 /* PBXContainerItemProxy */;
+		};
+		CBE34D7B2F9F7F5E00981B44 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = CBE34D622F9F7F5E00981B44 /* DriveAppTest Watch Watch App */;
+			targetProxy = CBE34D7A2F9F7F5E00981B44 /* PBXContainerItemProxy */;
+		};
+		CBE34D822F9F7F5E00981B44 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = CBE34D622F9F7F5E00981B44 /* DriveAppTest Watch Watch App */;
+			targetProxy = CBE34D812F9F7F5E00981B44 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -395,11 +659,17 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = DriveAppTest/DriveAppTest.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = P65DT353W9;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = DriveAppTest/Info.plist;
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "We need to read your heart rate to detect sleepiness.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "We need to access your health data for the sleep algorithm.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "We need to track your speed in the background while you drive.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need your speed to detect erratic driving.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -427,11 +697,17 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = DriveAppTest/DriveAppTest.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = P65DT353W9;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = DriveAppTest/Info.plist;
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "We need to read your heart rate to detect sleepiness.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "We need to access your health data for the sleep algorithm.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "We need to track your speed in the background while you drive.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need your speed to detect erratic driving.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -538,6 +814,170 @@
 			};
 			name = Release;
 		};
+		CBE34D852F9F7F5E00981B44 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "DriveAppTest Watch Watch App/DriveAppTest Watch Watch App.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = P65DT353W9;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "DriveAppTest-Watch-Watch-App-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "DriveAppTest Watch";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "We need to read your heart rate to detect sleepiness.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "We need to access your health data for the sleep algorithm.";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.jurishogair.DriveAppTest;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jurishogair.DriveAppTest.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Debug;
+		};
+		CBE34D862F9F7F5E00981B44 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "DriveAppTest Watch Watch App/DriveAppTest Watch Watch App.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = P65DT353W9;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "DriveAppTest-Watch-Watch-App-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "DriveAppTest Watch";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "We need to read your heart rate to detect sleepiness.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "We need to access your health data for the sleep algorithm.";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.jurishogair.DriveAppTest;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jurishogair.DriveAppTest.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Release;
+		};
+		CBE34D872F9F7F5E00981B44 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = P65DT353W9;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.jurishogair.DriveAppTest-Watch-Watch-AppTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/DriveAppTest Watch Watch App.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/DriveAppTest Watch Watch App";
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Debug;
+		};
+		CBE34D882F9F7F5E00981B44 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = P65DT353W9;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.jurishogair.DriveAppTest-Watch-Watch-AppTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/DriveAppTest Watch Watch App.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/DriveAppTest Watch Watch App";
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Release;
+		};
+		CBE34D892F9F7F5E00981B44 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = P65DT353W9;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.jurishogair.DriveAppTest-Watch-Watch-AppUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				TEST_TARGET_NAME = "DriveAppTest Watch Watch App";
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Debug;
+		};
+		CBE34D8A2F9F7F5E00981B44 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = P65DT353W9;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.jurishogair.DriveAppTest-Watch-Watch-AppUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				TEST_TARGET_NAME = "DriveAppTest Watch Watch App";
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -573,6 +1013,33 @@
 			buildConfigurations = (
 				CBE34D512F9F7C7A00981B44 /* Debug */,
 				CBE34D522F9F7C7A00981B44 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CBE34D8B2F9F7F5E00981B44 /* Build configuration list for PBXNativeTarget "DriveAppTest Watch Watch App" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CBE34D852F9F7F5E00981B44 /* Debug */,
+				CBE34D862F9F7F5E00981B44 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CBE34D8C2F9F7F5E00981B44 /* Build configuration list for PBXNativeTarget "DriveAppTest Watch Watch AppTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CBE34D872F9F7F5E00981B44 /* Debug */,
+				CBE34D882F9F7F5E00981B44 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CBE34D8D2F9F7F5E00981B44 /* Build configuration list for PBXNativeTarget "DriveAppTest Watch Watch AppUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CBE34D892F9F7F5E00981B44 /* Debug */,
+				CBE34D8A2F9F7F5E00981B44 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
