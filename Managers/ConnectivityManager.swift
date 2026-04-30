@@ -9,102 +9,185 @@ class ConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
     @Published var currentSleepScore = 0
     @Published var currentHeartRate: Double = 0
     @Published var isStill: Bool = false
+    @Published var triggerWatchReset = false
     
-    var currentSpeed: Double = 0
+    #if os(iOS)
+    @Published var isWatchAppInstalled: Bool = UserDefaults.standard.bool(forKey: "watchInstalled") {
+        didSet { UserDefaults.standard.set(isWatchAppInstalled, forKey: "watchInstalled") }
+    }
+    
+    @Published var pastTrips: [Trip] = [] {
+        didSet {
+            if let encoded = try? JSONEncoder().encode(pastTrips) {
+                UserDefaults.standard.set(encoded, forKey: "savedTrips")
+            }
+        }
+    }
+    
+    private var tripStartDate: Date?
+    private var speedReadings: [Int] = []
+    private var hrReadings: [Double] = []
+    private var hadWarning: Bool = false
+    #endif
     
     override private init() {
         super.init()
+        
+        #if os(iOS)
+        if let data = UserDefaults.standard.data(forKey: "savedTrips"),
+           let decoded = try? JSONDecoder().decode([Trip].self, from: data) {
+            self.pastTrips = decoded
+        }
+        #endif
+        
         if WCSession.isSupported() {
-            let session = WCSession.default
-            session.delegate = self
-            session.activate()
+            WCSession.default.delegate = self
+            WCSession.default.activate()
         }
     }
-    
-    // MARK: - Outgoing Messages
     
     func sendDriveStatus(isStarting: Bool) {
-        let stateMessage = ["isDriving": isStarting]
-        
-        if WCSession.default.isReachable {
-            WCSession.default.sendMessage(stateMessage, replyHandler: nil)
-        }
-        
-        try? WCSession.default.updateApplicationContext(stateMessage)
-    }
-    
-    func sendTelemetry(score: Int, hr: Double, still: Bool) {
-        let message: [String: Any] = [
-            "sleepScore": score,
-            "heartRate": hr,
-            "isStill": still
-        ]
-        
-        if WCSession.default.isReachable {
-            WCSession.default.sendMessage(message, replyHandler: nil)
-        }
-        
-        try? WCSession.default.updateApplicationContext(message)
-    }
-    
-    // MARK: - Incoming Messages
-    
-    func session(_ session: WCSession, didReceiveMessage message: [String : Any]) {
-        updateInternalState(from: message)
-    }
-    
-    func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String : Any]) {
-        updateInternalState(from: applicationContext)
-    }
-    
-    private func updateInternalState(from dictionary: [String: Any]) {
+        let msg: [String: Any] = ["isDriving": isStarting]
         DispatchQueue.main.async {
-            if let drivingStatus = dictionary["isDriving"] as? Bool {
+            if isStarting {
+                self.isDriving = true
+                #if os(iOS)
+                AlertManager.shared.wakeUpAudioSystem()
+                self.tripStartDate = Date()
+                self.speedReadings = []
+                self.hrReadings = []
+                self.hadWarning = false
+                #endif
+            } else {
+                self.isDriving = false
+                #if os(iOS)
+                self.saveTrip()
+                AlertManager.shared.stopAllAlerts()
+                #endif
+                self.currentSleepScore = 0
+            }
+        }
+        
+        if WCSession.default.isReachable {
+            WCSession.default.sendMessage(msg, replyHandler: nil) { _ in
+                WCSession.default.transferUserInfo(msg)
+            }
+        } else {
+            WCSession.default.transferUserInfo(msg)
+        }
+        try? WCSession.default.updateApplicationContext(msg)
+    }
+    
+    func sendTelemetry(score: Int, hr: Double = 0, still: Bool = false) {
+        let msg: [String: Any] = ["sleepScore": score, "heartRate": hr, "isStill": still]
+        try? WCSession.default.updateApplicationContext(msg)
+    }
+    
+    func sendCommand(_ command: String) {
+        let msg = ["command": command]
+        if WCSession.default.isReachable {
+            WCSession.default.sendMessage(msg, replyHandler: nil) { _ in
+                WCSession.default.transferUserInfo(msg)
+            }
+        } else {
+            WCSession.default.transferUserInfo(msg)
+        }
+    }
+    
+    func sendEmergencyReset() {
+        sendCommand("resetAwake")
+        DispatchQueue.main.async {
+            self.currentSleepScore = 0
+            #if os(iOS)
+            AlertManager.shared.stopAllAlerts()
+            #endif
+        }
+    }
+    
+    #if os(iOS)
+    func addTelemetry(speed: Int, hr: Double) {
+        if speed > 0 { speedReadings.append(speed) }
+        if hr > 0 { hrReadings.append(hr) }
+    }
+    
+    private func saveTrip() {
+        guard let start = tripStartDate else { return }
+        let durationMinutes = max(1, Int(Date().timeIntervalSince(start) / 60))
+        
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        formatter.timeStyle = .short
+        let dateString = formatter.string(from: start)
+        
+        let avgSpd = speedReadings.isEmpty ? 0 : speedReadings.reduce(0, +) / speedReadings.count
+        let avgHeart = hrReadings.isEmpty ? 0 : Int(hrReadings.reduce(0, +) / Double(hrReadings.count))
+        
+        let newTrip = Trip(date: dateString, duration: "\(durationMinutes) mins", avgSpeed: avgSpd, avgHR: avgHeart, hadSleepWarning: hadWarning)
+        pastTrips.insert(newTrip, at: 0)
+        
+        tripStartDate = nil
+    }
+    #endif
+    
+    func session(_ session: WCSession, didReceiveMessage message: [String : Any]) { handleIncoming(message) }
+    func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String : Any]) { handleIncoming(applicationContext) }
+    func session(_ session: WCSession, didReceiveUserInfo userInfo: [String : Any] = [:]) { handleIncoming(userInfo) }
+    
+    private func handleIncoming(_ dict: [String: Any]) {
+        DispatchQueue.main.async {
+            if let drivingStatus = dict["isDriving"] as? Bool {
+                #if os(iOS)
+                if self.isDriving == true && drivingStatus == false {
+                    self.saveTrip()
+                    AlertManager.shared.stopAllAlerts()
+                } else if self.isDriving == false && drivingStatus == true {
+                    AlertManager.shared.wakeUpAudioSystem()
+                    self.tripStartDate = Date()
+                    self.speedReadings = []
+                    self.hrReadings = []
+                    self.hadWarning = false
+                }
+                #endif
                 self.isDriving = drivingStatus
             }
-            if let hr = dictionary["heartRate"] as? Double {
-                self.currentHeartRate = hr
-            }
-            if let still = dictionary["isStill"] as? Bool {
-                self.isStill = still
-            }
-            if let score = dictionary["sleepScore"] as? Int {
+            if let hr = dict["heartRate"] as? Double { self.currentHeartRate = hr }
+            if let still = dict["isStill"] as? Bool { self.isStill = still }
+            if let score = dict["sleepScore"] as? Int {
                 self.currentSleepScore = score
-                
                 #if os(iOS)
-                self.triggerSafetyLogic(for: score)
+                if score >= 70 { self.hadWarning = true }
+                #endif
+            }
+            
+            if let cmd = dict["command"] as? String {
+                if cmd == "resetAwake" {
+                    self.currentSleepScore = 0
+                    self.triggerWatchReset = true
+                    #if os(iOS)
+                    AlertManager.shared.stopAllAlerts()
+                    #endif
+                }
+                #if os(iOS)
+                if cmd == "speakStage2" { AlertManager.shared.speakStage2() }
+                if cmd == "speakStage3" { AlertManager.shared.speakStage3() }
                 #endif
             }
         }
     }
-    
-    #if os(iOS)
-    private func triggerSafetyLogic(for score: Int) {
-        // NO MORE SPEED GATE. Voice is guaranteed regardless of GPS km/h.
-        
-        if score >= 90 {
-            AlertManager.shared.playStageAlert(stage: 3)
-        } else if score >= 70 {
-            AlertManager.shared.playStageAlert(stage: 2)
-        } else if score >= 40 {
-            AlertManager.shared.playStageAlert(stage: 1)
-        } else {
-            // Only stop alerts if score naturally drops below 40
-            AlertManager.shared.stopAllAlerts()
-        }
-    }
-    #endif
-    
-    // MARK: - WCSession Delegate Requirements
-    
+
     func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
-        if let error = error { print("WCSession activation failed: \(error.localizedDescription)") }
+        #if os(iOS)
+        DispatchQueue.main.async {
+            self.isWatchAppInstalled = session.isWatchAppInstalled
+        }
+        #endif
     }
     
     #if os(iOS)
-    func sessionDidBecomeInactive(_ session: WCSession) {}
-    func sessionDidDeactivate(_ session: WCSession) {
-        session.activate()
+    func sessionWatchStateDidChange(_ session: WCSession) {
+        DispatchQueue.main.async { self.isWatchAppInstalled = session.isWatchAppInstalled }
     }
+    func sessionDidBecomeInactive(_ session: WCSession) {}
+    func sessionDidDeactivate(_ session: WCSession) { session.activate() }
     #endif
 }

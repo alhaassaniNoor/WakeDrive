@@ -2,142 +2,235 @@ import Foundation
 import CoreMotion
 import Combine
 import WatchKit
+import HealthKit
 
 class MotionManager: ObservableObject {
     private var motionManager = CMMotionManager()
+    private var healthStore = HKHealthStore()
+    private var workoutSession: HKWorkoutSession?
+    
     @Published var motionDangerScore = 0
-    var currentBPM: Double = 0
+    var currentBPM: Double = 75
     var isStill: Bool = false
     
     private var lastMovementTime = Date()
-    private var stillnessTimer: Timer?
-    
-    // Haptic Stage Controls
+    private var logicTimer: Timer?
     private var hapticTimer: Timer?
     private var hapticTicks = 0
-    private var maxHapticTicks = 0
-    private var currentHapticStage = 0
+    private var activeStage = 0
+    
+    // 🚨 THE NEW FIX: A memory buffer to hold 1.5 seconds of wrist movement
+    private var shakeBuffer: [Double] = []
+    
+    private var calibrationSeconds = 0
+    private let CALIBRATION_LIMIT = 60
+    private var hrReadings: [Double] = []
+    private var dynamicHRDropThreshold: Double = 60.0
     
     func startTracking() {
+        stopTracking()
         guard motionManager.isDeviceMotionAvailable else { return }
-        motionDangerScore = 0
+        
+        motionDangerScore = -1
         isStill = false
         lastMovementTime = Date()
-        currentHapticStage = 0
+        activeStage = 0
+        shakeBuffer.removeAll()
+        calibrationSeconds = 0
+        hrReadings = []
         
-        motionManager.deviceMotionUpdateInterval = 0.5
-        motionManager.startDeviceMotionUpdates(to: .main) { [weak self] motion, error in
+        startWorkoutSession()
+        startHeartRateQuery()
+        
+        // Checks 10 times a second
+        motionManager.deviceMotionUpdateInterval = 0.1
+        motionManager.startDeviceMotionUpdates(to: .main) { [weak self] motion, _ in
             guard let self = self, let motion = motion else { return }
             self.analyzeMovement(motion)
         }
         
-        stillnessTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            self?.checkStillness()
+        logicTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            self?.evaluateRealData()
         }
     }
     
     func stopTracking() {
         motionManager.stopDeviceMotionUpdates()
-        
-        // RUTHLESSLY KILL ALL TIMERS AND RESET SCORE
-        stillnessTimer?.invalidate()
-        stillnessTimer = nil
-        
-        hapticTimer?.invalidate()
-        hapticTimer = nil
-        currentHapticStage = 0
-        
+        logicTimer?.invalidate()
+        logicTimer = nil
+        workoutSession?.end()
+        stopHaptics()
+        activeStage = 0
+        DispatchQueue.main.async { self.motionDangerScore = 0 }
+    }
+    
+    func resetDemo() {
+        stopHaptics()
+        lastMovementTime = Date()
+        activeStage = 0
+        isStill = false
         motionDangerScore = 0
+        shakeBuffer.removeAll()
+        updateScore(to: 0)
     }
     
     private func analyzeMovement(_ motion: CMDeviceMotion) {
-        // --- THE STAGE 3 HARD LOCK ---
-        // If score is 90+, ignore arm movement. They MUST press the button.
-        guard motionDangerScore < 90 else { return }
+        if calibrationSeconds < CALIBRATION_LIMIT { return }
         
-        let accelX = abs(motion.userAcceleration.x)
-        let accelY = abs(motion.userAcceleration.y)
-        let accelZ = abs(motion.userAcceleration.z)
-        let totalForce = accelX + accelY + accelZ
+        let totalForce = abs(motion.userAcceleration.x) + abs(motion.userAcceleration.y) + abs(motion.userAcceleration.z)
         
-        // If they jerk the wheel, spike the score (but only if not already in Stage 3)
-        if totalForce > 2.5 {
-            updateScore(to: min(100, motionDangerScore + 20))
-            WKInterfaceDevice.current().play(.directionUp)
-        } else if totalForce > 0.15 {
-            // Normal movement keeps them safe
+        // 🚨 ADD MOVEMENT TO THE BUFFER (Keeps exactly 1.5 seconds of data)
+        shakeBuffer.append(totalForce)
+        if shakeBuffer.count > 15 {
+            shakeBuffer.removeFirst()
+        }
+        
+        // 🚨 FOOLPROOF SHAKE-TO-WAKE LOGIC
+        if motionDangerScore >= 90 {
+            // Calculate the average energy over the last 1.5 seconds
+            let averageForce = shakeBuffer.reduce(0, +) / Double(shakeBuffer.count)
+            
+            // If the buffer is full AND the average energy is high (you are actively shaking it)
+            if shakeBuffer.count == 15 && averageForce > 1.0 {
+                updateScore(to: max(0, motionDangerScore - 50)) // Drop 50 points
+                shakeBuffer.removeAll() // Clear memory
+                stopHaptics()
+                activeStage = 0
+                lastMovementTime = Date() // Give a fresh 8-second grace period
+                return
+            }
+            return // Pauses normal steering math while Stage 3 is screaming
+        }
+        
+        // Standard movement tracking (only applies if under Stage 3)
+        if totalForce > 3.5 {
+            updateScore(to: min(100, motionDangerScore + 40)) // Panic swerve
+        } else if totalForce > 0.30 {
             lastMovementTime = Date()
             isStill = false
+            if motionDangerScore > 0 { updateScore(to: max(0, motionDangerScore - 2)) }
+        }
+    }
+    
+    private func evaluateRealData() {
+        if calibrationSeconds < CALIBRATION_LIMIT {
+            calibrationSeconds += 1
+            if currentBPM > 40 { hrReadings.append(currentBPM) }
             
-            if motionDangerScore > 0 {
-                updateScore(to: max(0, motionDangerScore - 2))
+            if calibrationSeconds == CALIBRATION_LIMIT {
+                let sum = hrReadings.reduce(0, +)
+                let avg = hrReadings.isEmpty ? 75.0 : sum / Double(hrReadings.count)
+                dynamicHRDropThreshold = avg * 0.85
+                updateScore(to: 0)
+            } else {
+                updateScore(to: -1)
             }
-            // Stop early haptics if they moved
-            if motionDangerScore < 40 {
+            return
+        }
+        
+        let secondsSinceLastMove = Date().timeIntervalSince(lastMovementTime)
+        var scoreIncrement = 0
+        
+        // 8-Second rule
+        if secondsSinceLastMove > 8.0 {
+            scoreIncrement += 1
+            isStill = true
+        } else {
+            isStill = false
+        }
+        
+        if currentBPM > 0 && currentBPM < dynamicHRDropThreshold {
+            scoreIncrement += 1
+        }
+        
+        // Pauses the score from climbing while an alarm is actively vibrating
+        if scoreIncrement > 0 {
+            if hapticTimer == nil || activeStage == 3 {
+                updateScore(to: min(100, motionDangerScore + scoreIncrement))
+            }
+        }
+        manageStages()
+    }
+    
+    private func manageStages() {
+        let targetStage: Int
+        if motionDangerScore >= 90 { targetStage = 3 }
+        else if motionDangerScore >= 70 { targetStage = 2 }
+        else if motionDangerScore >= 40 { targetStage = 1 }
+        else { targetStage = 0 }
+        
+        if targetStage != activeStage {
+            if targetStage == 3 { triggerStage3() }
+            else if targetStage == 2 { triggerStage2() }
+            else if targetStage == 1 { triggerStage1() }
+            else {
                 stopHaptics()
+                activeStage = 0
             }
         }
     }
     
-    private func checkStillness() {
-        let secondsSinceLastMove = Date().timeIntervalSince(lastMovementTime)
-        var scoreIncrement = 0
-        
-        // FACTOR 1: Physical Stillness
-        if secondsSinceLastMove > 5.0 {
-            scoreIncrement += 5
-            isStill = true
-        }
-        
-        // FACTOR 2: Biological Signal (Heart Rate Drop)
-        if currentBPM > 0 && currentBPM < 55 {
-            scoreIncrement += 5
-        }
-        
-        if scoreIncrement > 0 && motionDangerScore < 100 {
-            updateScore(to: motionDangerScore + scoreIncrement)
-        }
-        
-        triggerStageHaptics()
-    }
-
-    private func triggerStageHaptics() {
-        if motionDangerScore >= 90 && currentHapticStage != 3 {
-            // STAGE 3: 20+ Seconds (Loops until reset)
-            startHapticSequence(duration: 999, type: .retry, stage: 3)
-        } else if motionDangerScore >= 70 && motionDangerScore < 90 && currentHapticStage != 2 {
-            // STAGE 2: 15 Seconds
-            startHapticSequence(duration: 15, type: .failure, stage: 2)
-        } else if motionDangerScore >= 40 && motionDangerScore < 70 && currentHapticStage != 1 {
-            // STAGE 1: 10 Seconds
-            startHapticSequence(duration: 10, type: .directionUp, stage: 1)
-        }
-    }
-
-    private func startHapticSequence(duration: Int, type: WKHapticType, stage: Int) {
+    private func triggerStage1() {
         stopHaptics()
-        currentHapticStage = stage
-        maxHapticTicks = duration
+        activeStage = 1
         hapticTicks = 0
-        
-        hapticTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
+        hapticTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [weak self] _ in
             guard let self = self else { return }
-            if self.hapticTicks < self.maxHapticTicks {
-                WKInterfaceDevice.current().play(type)
+            if self.activeStage != 1 { return }
+            
+            if self.hapticTicks < 50 {
+                WKInterfaceDevice.current().play(.start)
                 self.hapticTicks += 1
             } else {
                 self.stopHaptics()
-                // If it wasn't stage 3, reset stage memory so it can fire again if needed
-                if stage != 3 { self.currentHapticStage = 0 }
+                self.lastMovementTime = Date()
             }
+        }
+    }
+    
+    private func triggerStage2() {
+        stopHaptics()
+        activeStage = 2
+        hapticTicks = 0
+        hapticTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
+            if self.activeStage != 2 { return }
+            
+            if self.hapticTicks < 66 {
+                WKInterfaceDevice.current().play(.start)
+                self.hapticTicks += 1
+            } else if self.hapticTicks == 66 {
+                ConnectivityManager.shared.sendCommand("speakStage2")
+                self.hapticTicks += 1
+            } else {
+                self.stopHaptics()
+                self.lastMovementTime = Date()
+            }
+        }
+    }
+    
+    private func triggerStage3() {
+        stopHaptics()
+        activeStage = 3
+        hapticTicks = 0
+        hapticTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
+            if self.activeStage != 3 { return }
+            
+            let cycleTick = self.hapticTicks % 100
+            
+            if cycleTick < 83 {
+                WKInterfaceDevice.current().play(.start)
+            } else if cycleTick == 83 {
+                ConnectivityManager.shared.sendCommand("speakStage3")
+            }
+            self.hapticTicks += 1
         }
     }
 
     private func stopHaptics() {
         hapticTimer?.invalidate()
         hapticTimer = nil
-        // Only clear the stage memory if we are back in the safe zone
-        if motionDangerScore < 40 { currentHapticStage = 0 }
     }
 
     private func updateScore(to newScore: Int) {
@@ -146,4 +239,33 @@ class MotionManager: ObservableObject {
             ConnectivityManager.shared.sendTelemetry(score: newScore, hr: self.currentBPM, still: self.isStill)
         }
     }
-}           
+    
+    private func startWorkoutSession() {
+        let config = HKWorkoutConfiguration()
+        config.activityType = .other
+        do {
+            workoutSession = try HKWorkoutSession(healthStore: healthStore, configuration: config)
+            workoutSession?.startActivity(with: Date())
+        } catch { print("Failed to start session") }
+    }
+    
+    private func startHeartRateQuery() {
+        guard HKHealthStore.isHealthDataAvailable() else { return }
+        let heartRateType = HKObjectType.quantityType(forIdentifier: .heartRate)!
+        let query = HKObserverQuery(sampleType: heartRateType, predicate: nil) { [weak self] _, _, _ in
+            self?.fetchLatestHeartRate()
+        }
+        healthStore.execute(query)
+    }
+    
+    private func fetchLatestHeartRate() {
+        let heartRateType = HKQuantityType.quantityType(forIdentifier: .heartRate)!
+        let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
+        let query = HKSampleQuery(sampleType: heartRateType, predicate: nil, limit: 1, sortDescriptors: [sortDescriptor]) { [weak self] _, results, _ in
+            guard let sample = results?.first as? HKQuantitySample else { return }
+            let bpm = sample.quantity.doubleValue(for: HKUnit.count().unitDivided(by: HKUnit.minute()))
+            DispatchQueue.main.async { self?.currentBPM = bpm }
+        }
+        healthStore.execute(query)
+    }
+}

@@ -667,8 +667,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = DriveAppTest/Info.plist;
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "We need to read your heart rate to detect sleepiness.";
-				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "We need to access your health data for the sleep algorithm.";
-				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "We need to track your speed in the background while you drive.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "WakeDrive needs your location to track driving speed.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need your speed to detect erratic driving.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -705,8 +704,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = DriveAppTest/Info.plist;
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "We need to read your heart rate to detect sleepiness.";
-				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "We need to access your health data for the sleep algorithm.";
-				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "We need to track your speed in the background while you drive.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "WakeDrive needs your location to track driving speed.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need your speed to detect erratic driving.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
