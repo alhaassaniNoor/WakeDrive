@@ -3,7 +3,7 @@ import HealthKit
 import CoreLocation
 import Combine
 
-// 🚨 ADDED CODABLE: This allows the trip to be saved permanently!
+// Codable allows the trip data to be converted saved permanently to the iPhone's storage. (should change to swiftdata)
 struct Trip: Identifiable, Codable {
     var id = UUID(); var date: String; var duration: String; var avgSpeed: Int; var avgHR: Int; var hadSleepWarning: Bool
 }
@@ -25,7 +25,6 @@ struct ContentView: View {
     }
 }
 
-// MARK: - ONBOARDING (5 Steps)
 struct MasterOnboardingView: View {
     @Binding var hasCompleted: Bool
     @State private var step = 1
@@ -68,6 +67,7 @@ struct MasterOnboardingView: View {
                     Button(action: {
                         let healthStore = HKHealthStore()
                         let readTypes = Set([HKObjectType.quantityType(forIdentifier: .heartRate)!])
+                        // Requests heart rate access to establish a baseline and detect drops caused by drowsiness.
                         healthStore.requestAuthorization(toShare: nil, read: readTypes) { success, _ in DispatchQueue.main.async { step = 4 } }
                     }) { Text("Grant Health Access").font(.headline).bold().foregroundColor(.white).frame(maxWidth: .infinity).padding().background(Color.red).cornerRadius(15).padding(.horizontal, 40) }.padding(.bottom, 40)
                 }
@@ -80,6 +80,7 @@ struct MasterOnboardingView: View {
                     Spacer()
                     Button(action: {
                         let manager = CLLocationManager()
+                        // Requests location access to measure driving speed and keep the iOS app active in the background.
                         manager.requestWhenInUseAuthorization()
                         step = 5
                     }) { Text("Grant Location Access").font(.headline).bold().foregroundColor(.white).frame(maxWidth: .infinity).padding().background(Color.green).cornerRadius(15).padding(.horizontal, 40) }.padding(.bottom, 40)
@@ -98,7 +99,6 @@ struct MasterOnboardingView: View {
     }
 }
 
-// MARK: - WATCH SETUP & HOME
 struct WatchSetupView: View {
     var body: some View {
         VStack(spacing: 30) {
@@ -140,7 +140,7 @@ struct HomeView: View {
                     
                 }.padding(.bottom, 30)
             }
-            // 🚨 THE FIX IS HERE! It gracefully falls back to "Hello, Driver" if the name is blank.
+            // Gracefully falls back to "Hello, Driver" if the user left the name field blank during setup.
             .navigationTitle(userName.isEmpty ? "Hello, Driver" : "Hello, \(userName)")
         }
     }
@@ -163,7 +163,6 @@ struct TripCardView: View {
     }
 }
 
-// MARK: - LIVE DASHBOARD
 struct DriveModeView: View {
     @StateObject private var connectivity = ConnectivityManager.shared
     @StateObject private var locationManager = LocationManager()
@@ -179,7 +178,8 @@ struct DriveModeView: View {
                     Text("Establishing vital baselines...").font(.subheadline).bold().foregroundColor(.secondary)
                 } else {
                     Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 40))
-                        .foregroundColor(connectivity.currentSleepScore > 70 ? .red : (connectivity.currentSleepScore > 40 ? .orange : .green))
+                        // Controls the UI color of the risk score based on the current stage danger level.
+                        .foregroundColor(connectivity.currentSleepScore >= 70 ? .red : (connectivity.currentSleepScore >= 40 ? .orange : .green))
                     Text("\(connectivity.currentSleepScore)").font(.system(size: 100, weight: .black, design: .rounded))
                     Text("SLEEP RISK SCORE").font(.subheadline).bold().foregroundColor(.secondary)
                 }
@@ -200,6 +200,7 @@ struct DriveModeView: View {
                 Text("End Drive Mode").font(.title3).bold().foregroundColor(.white).frame(maxWidth: .infinity).padding().background(Color.red).cornerRadius(15).padding(.horizontal, 20)
             }.padding(.bottom, 20)
         }
+        // Records the driver's current speed and heart rate every 5 seconds to calculate the final trip averages.
         .onReceive(Timer.publish(every: 5, on: .main, in: .common).autoconnect()) { _ in
             let cleanSpeed = locationManager.currentSpeed < 5 ? 0 : locationManager.currentSpeed
             connectivity.addTelemetry(speed: cleanSpeed, hr: connectivity.currentHeartRate)

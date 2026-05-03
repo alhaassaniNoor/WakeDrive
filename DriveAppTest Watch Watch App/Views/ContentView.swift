@@ -17,7 +17,6 @@ struct ContentView: View {
                 
                 VStack {
                     if viewModel.currentScore >= 90 {
-                        // 🚨 NEW SHAKE UI
                         VStack(spacing: 8) {
                             Image(systemName: "waveform.path.ecg.rectangle.fill").font(.system(size: 40)).foregroundColor(.white)
                             Text("SHAKE WRIST").font(.headline).fontWeight(.black).foregroundColor(.white)

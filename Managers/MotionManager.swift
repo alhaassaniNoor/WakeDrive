@@ -19,11 +19,10 @@ class MotionManager: ObservableObject {
     private var hapticTicks = 0
     private var activeStage = 0
     
-    // 🚨 THE NEW FIX: A memory buffer to hold 1.5 seconds of wrist movement
     private var shakeBuffer: [Double] = []
     
     private var calibrationSeconds = 0
-    private let CALIBRATION_LIMIT = 60
+    private let CALIBRATION_LIMIT = 60 // Seconds needed at the start of a drive to establish a baseline heart rate.
     private var hrReadings: [Double] = []
     private var dynamicHRDropThreshold: Double = 60.0
     
@@ -42,8 +41,7 @@ class MotionManager: ObservableObject {
         startWorkoutSession()
         startHeartRateQuery()
         
-        // Checks 10 times a second
-        motionManager.deviceMotionUpdateInterval = 0.1
+        motionManager.deviceMotionUpdateInterval = 0.1 // Checks the wrist sensor 10 times per second.
         motionManager.startDeviceMotionUpdates(to: .main) { [weak self] motion, _ in
             guard let self = self, let motion = motion else { return }
             self.analyzeMovement(motion)
@@ -79,33 +77,28 @@ class MotionManager: ObservableObject {
         
         let totalForce = abs(motion.userAcceleration.x) + abs(motion.userAcceleration.y) + abs(motion.userAcceleration.z)
         
-        // 🚨 ADD MOVEMENT TO THE BUFFER (Keeps exactly 1.5 seconds of data)
         shakeBuffer.append(totalForce)
-        if shakeBuffer.count > 15 {
+        if shakeBuffer.count > 15 { // Holds exactly 1.5 seconds of wrist movement history.
             shakeBuffer.removeFirst()
         }
         
-        // 🚨 FOOLPROOF SHAKE-TO-WAKE LOGIC
         if motionDangerScore >= 90 {
-            // Calculate the average energy over the last 1.5 seconds
             let averageForce = shakeBuffer.reduce(0, +) / Double(shakeBuffer.count)
             
-            // If the buffer is full AND the average energy is high (you are actively shaking it)
-            if shakeBuffer.count == 15 && averageForce > 1.0 {
-                updateScore(to: max(0, motionDangerScore - 50)) // Drop 50 points
-                shakeBuffer.removeAll() // Clear memory
+            if shakeBuffer.count == 15 && averageForce > 1.0 { // 1.0 Gs is the sustained force required to register a wake-up shake and dismiss the alarm.
+                updateScore(to: max(0, motionDangerScore - 50))
+                shakeBuffer.removeAll()
                 stopHaptics()
                 activeStage = 0
-                lastMovementTime = Date() // Give a fresh 8-second grace period
+                lastMovementTime = Date()
                 return
             }
-            return // Pauses normal steering math while Stage 3 is screaming
+            return
         }
         
-        // Standard movement tracking (only applies if under Stage 3)
-        if totalForce > 3.5 {
-            updateScore(to: min(100, motionDangerScore + 40)) // Panic swerve
-        } else if totalForce > 0.30 {
+        if totalForce > 3.5 { // 3.5 Gs indicates a violent swerve or panic movement (instantly adds 40 points).
+            updateScore(to: min(100, motionDangerScore + 40))
+        } else if totalForce > 0.30 { // 0.30 Gs is the minimum force of normal steering needed to prove the driver is awake.
             lastMovementTime = Date()
             isStill = false
             if motionDangerScore > 0 { updateScore(to: max(0, motionDangerScore - 2)) }
@@ -120,7 +113,7 @@ class MotionManager: ObservableObject {
             if calibrationSeconds == CALIBRATION_LIMIT {
                 let sum = hrReadings.reduce(0, +)
                 let avg = hrReadings.isEmpty ? 75.0 : sum / Double(hrReadings.count)
-                dynamicHRDropThreshold = avg * 0.85
+                dynamicHRDropThreshold = avg * 0.85 // The driver's heart rate must drop 15% below their baseline to increase risk points.
                 updateScore(to: 0)
             } else {
                 updateScore(to: -1)
@@ -131,8 +124,7 @@ class MotionManager: ObservableObject {
         let secondsSinceLastMove = Date().timeIntervalSince(lastMovementTime)
         var scoreIncrement = 0
         
-        // 8-Second rule
-        if secondsSinceLastMove > 8.0 {
+        if secondsSinceLastMove > 8.0 { // 8.0 seconds of a dead-still wrist triggers a risk point increase.
             scoreIncrement += 1
             isStill = true
         } else {
@@ -143,7 +135,6 @@ class MotionManager: ObservableObject {
             scoreIncrement += 1
         }
         
-        // Pauses the score from climbing while an alarm is actively vibrating
         if scoreIncrement > 0 {
             if hapticTimer == nil || activeStage == 3 {
                 updateScore(to: min(100, motionDangerScore + scoreIncrement))
@@ -178,7 +169,7 @@ class MotionManager: ObservableObject {
             guard let self = self else { return }
             if self.activeStage != 1 { return }
             
-            if self.hapticTicks < 50 {
+            if self.hapticTicks < 50 { // 50 ticks = 15 seconds of vibration for Stage 1.
                 WKInterfaceDevice.current().play(.start)
                 self.hapticTicks += 1
             } else {
@@ -196,7 +187,7 @@ class MotionManager: ObservableObject {
             guard let self = self else { return }
             if self.activeStage != 2 { return }
             
-            if self.hapticTicks < 66 {
+            if self.hapticTicks < 66 { // 66 ticks = 20 seconds of vibration for Stage 2.
                 WKInterfaceDevice.current().play(.start)
                 self.hapticTicks += 1
             } else if self.hapticTicks == 66 {
@@ -217,9 +208,9 @@ class MotionManager: ObservableObject {
             guard let self = self else { return }
             if self.activeStage != 3 { return }
             
-            let cycleTick = self.hapticTicks % 100
+            let cycleTick = self.hapticTicks % 100 // 100 ticks = 30 second total cycle loop for Stage 3.
             
-            if cycleTick < 83 {
+            if cycleTick < 83 { // 83 ticks = 25 seconds of vibration before the voice alert.
                 WKInterfaceDevice.current().play(.start)
             } else if cycleTick == 83 {
                 ConnectivityManager.shared.sendCommand("speakStage3")
