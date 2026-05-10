@@ -1,11 +1,5 @@
-//
-//  DriveAppTestApp.swift
-//  DriveAppTest
-//
-//  Created by juri shogair on 10/11/1447 AH.
-//
-
 import SwiftUI
+import SwiftData
 
 @main
 struct DriveAppTestApp: App {
@@ -13,5 +7,7 @@ struct DriveAppTestApp: App {
         WindowGroup {
             ContentView()
         }
+        // Wires up SwiftData to the entire app
+        .modelContainer(for: Trip.self)
     }
 }

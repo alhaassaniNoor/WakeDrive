@@ -2,6 +2,14 @@ import Foundation
 import WatchConnectivity
 import Combine
 
+struct TripSummaryData: Equatable {
+    let date: String
+    let duration: String
+    let speed: Int
+    let hr: Int
+    let warning: Bool
+}
+
 class ConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
     static let shared = ConnectivityManager()
     
@@ -12,17 +20,8 @@ class ConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
     @Published var triggerWatchReset = false
     
     #if os(iOS)
-    @Published var isWatchAppInstalled: Bool = UserDefaults.standard.bool(forKey: "watchInstalled") {
-        didSet { UserDefaults.standard.set(isWatchAppInstalled, forKey: "watchInstalled") }
-    }
-    
-    @Published var pastTrips: [Trip] = [] {
-        didSet {
-            if let encoded = try? JSONEncoder().encode(pastTrips) {
-                UserDefaults.standard.set(encoded, forKey: "savedTrips")
-            }
-        }
-    }
+    @Published var isWatchAppInstalled: Bool = false
+    @Published var newlyCompletedTripData: TripSummaryData?
     
     private var tripStartDate: Date?
     private var speedReadings: [Int] = []
@@ -32,13 +31,6 @@ class ConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
     
     override private init() {
         super.init()
-        
-        #if os(iOS)
-        if let data = UserDefaults.standard.data(forKey: "savedTrips"),
-           let decoded = try? JSONDecoder().decode([Trip].self, from: data) {
-            self.pastTrips = decoded
-        }
-        #endif
         
         if WCSession.isSupported() {
             WCSession.default.delegate = self
@@ -122,8 +114,13 @@ class ConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
         let avgSpd = speedReadings.isEmpty ? 0 : speedReadings.reduce(0, +) / speedReadings.count
         let avgHeart = hrReadings.isEmpty ? 0 : Int(hrReadings.reduce(0, +) / Double(hrReadings.count))
         
-        let newTrip = Trip(date: dateString, duration: "\(durationMinutes) mins", avgSpeed: avgSpd, avgHR: avgHeart, hadSleepWarning: hadWarning)
-        pastTrips.insert(newTrip, at: 0)
+        self.newlyCompletedTripData = TripSummaryData(
+            date: dateString,
+            duration: "\(durationMinutes) mins",
+            speed: avgSpd,
+            hr: avgHeart,
+            warning: hadWarning
+        )
         
         tripStartDate = nil
     }

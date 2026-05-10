@@ -1,12 +1,8 @@
 import SwiftUI
+import SwiftData
 import HealthKit
 import CoreLocation
 import Combine
-
-// Codable allows the trip data to be converted saved permanently to the iPhone's storage. (should change to swiftdata)
-struct Trip: Identifiable, Codable {
-    var id = UUID(); var date: String; var duration: String; var avgSpeed: Int; var avgHR: Int; var hadSleepWarning: Bool
-}
 
 struct ContentView: View {
     @AppStorage("hasCompletedOnboarding") var hasCompletedOnboarding: Bool = false
@@ -17,8 +13,6 @@ struct ContentView: View {
             MasterOnboardingView(hasCompleted: $hasCompletedOnboarding)
         } else if !connectivity.isWatchAppInstalled {
             WatchSetupView()
-        } else if connectivity.isDriving {
-            DriveModeView()
         } else {
             HomeView()
         }
@@ -67,7 +61,6 @@ struct MasterOnboardingView: View {
                     Button(action: {
                         let healthStore = HKHealthStore()
                         let readTypes = Set([HKObjectType.quantityType(forIdentifier: .heartRate)!])
-                        // Requests heart rate access to establish a baseline and detect drops caused by drowsiness.
                         healthStore.requestAuthorization(toShare: nil, read: readTypes) { success, _ in DispatchQueue.main.async { step = 4 } }
                     }) { Text("Grant Health Access").font(.headline).bold().foregroundColor(.white).frame(maxWidth: .infinity).padding().background(Color.red).cornerRadius(15).padding(.horizontal, 40) }.padding(.bottom, 40)
                 }
@@ -80,7 +73,6 @@ struct MasterOnboardingView: View {
                     Spacer()
                     Button(action: {
                         let manager = CLLocationManager()
-                        // Requests location access to measure driving speed and keep the iOS app active in the background.
                         manager.requestWhenInUseAuthorization()
                         step = 5
                     }) { Text("Grant Location Access").font(.headline).bold().foregroundColor(.white).frame(maxWidth: .infinity).padding().background(Color.green).cornerRadius(15).padding(.horizontal, 40) }.padding(.bottom, 40)
@@ -111,7 +103,7 @@ struct WatchSetupView: View {
                 HStack { Image(systemName: "2.circle.fill"); Text("Scroll to the bottom & tap 'Install'.") }
             }.font(.headline).padding(.vertical, 20)
             Spacer()
-            HStack { ProgressView().padding(.trailing, 5); Text("Waiting for installation...").font(.caption).foregroundColor(.gray) }.padding(.bottom, 40)
+            HStack { ProgressView().padding(.trailing, 5); Text("Waiting for connection...").font(.caption).foregroundColor(.gray) }.padding(.bottom, 40)
         }
     }
 }
@@ -119,30 +111,116 @@ struct WatchSetupView: View {
 struct HomeView: View {
     @AppStorage("userName") var userName: String = ""
     @StateObject private var connectivity = ConnectivityManager.shared
+    @StateObject private var locationManager = LocationManager()
+    
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \Trip.date, order: .reverse) private var pastTrips: [Trip]
     
     var body: some View {
         NavigationView {
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    VStack(spacing: 15) {
-                        Image(systemName: "car.fill").font(.system(size: 40)).foregroundColor(.green)
-                        Text("Ready to Drive").font(.title2).bold()
-                        Text("Start the trip from your Apple Watch.").multilineTextAlignment(.center).foregroundColor(.secondary).font(.subheadline).padding(.horizontal)
-                    }.frame(maxWidth: .infinity).padding(.vertical, 30).background(Color(UIColor.secondarySystemBackground)).cornerRadius(20).padding(.horizontal, 20)
+                VStack(alignment: .leading, spacing: 25) {
                     
-                    Text("Recent Trips").font(.title3).bold().padding(.horizontal, 20).padding(.top, 10)
-                    
-                    if connectivity.pastTrips.isEmpty {
-                        Text("No trips recorded yet. Start driving to see your data!").foregroundColor(.secondary).padding(.horizontal, 20)
+                    // 🚨 Fixed: Added top padding so it doesn't suffocate the "Hello Juri" title
+                    if connectivity.isDriving {
+                        ActiveTripCard(connectivity: connectivity)
+                            .padding(.top, 20)
                     } else {
-                        ForEach(connectivity.pastTrips) { trip in TripCardView(trip: trip) }
+                        ReadyToDriveCard()
+                            .padding(.top, 20)
+                    }
+                    
+                    Text("Recent Trips")
+                        .font(.title3).bold()
+                        .padding(.horizontal, 20)
+                        .padding(.top, 10)
+                    
+                    // 🚨 Fixed: Always shows recent trips, no matter if driving or not!
+                    if pastTrips.isEmpty {
+                        Text("No trips recorded yet. Start driving to see your data!")
+                            .foregroundColor(.secondary).padding(.horizontal, 20)
+                    } else {
+                        ForEach(pastTrips) { trip in
+                            TripCardView(trip: trip)
+                        }
                     }
                     
                 }.padding(.bottom, 30)
             }
-            // Gracefully falls back to "Hello, Driver" if the user left the name field blank during setup.
             .navigationTitle(userName.isEmpty ? "Hello, Driver" : "Hello, \(userName)")
+            .onChange(of: connectivity.newlyCompletedTripData) { oldValue, newValue in
+                if let data = newValue {
+                    let newTrip = Trip(date: data.date, duration: data.duration, avgSpeed: data.speed, avgHR: data.hr, hadSleepWarning: data.warning)
+                    modelContext.insert(newTrip)
+                    connectivity.newlyCompletedTripData = nil
+                }
+            }
         }
+        .onReceive(Timer.publish(every: 5, on: .main, in: .common).autoconnect()) { _ in
+            if connectivity.isDriving {
+                let cleanSpeed = locationManager.currentSpeed < 5 ? 0 : locationManager.currentSpeed
+                connectivity.addTelemetry(speed: cleanSpeed, hr: connectivity.currentHeartRate)
+            }
+        }
+    }
+}
+
+struct ReadyToDriveCard: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Ready to Drive")
+                .font(.title3).bold()
+                .foregroundColor(.black)
+            
+            HStack(alignment: .bottom) {
+                Text("Start the trip directly from your Apple Watch. Your phone will automatically become your dashboard.")
+                    .font(.subheadline)
+                    .foregroundColor(.black.opacity(0.8))
+                
+                Spacer()
+                
+                Image(systemName: "car.top.radiowaves.rear.left.and.rear.right")
+                    .font(.system(size: 40))
+                    .foregroundColor(.black)
+            }
+        }
+        .padding(20)
+        .background(Color.yellow)
+        .cornerRadius(20)
+        .padding(.horizontal, 20)
+    }
+}
+
+struct ActiveTripCard: View {
+    @ObservedObject var connectivity: ConnectivityManager
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            Text("Active Trip")
+                .font(.title2)
+                .foregroundColor(.white)
+            
+            Image(systemName: "steeringwheel")
+                .font(.system(size: 50))
+                .foregroundColor(.green)
+                .padding(.vertical, 10)
+            
+            Button(action: {
+                connectivity.sendDriveStatus(isStarting: false)
+            }) {
+                Text("End Trip")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.red)
+                    .cornerRadius(15)
+            }
+        }
+        .padding(25)
+        .background(Color(UIColor.secondarySystemBackground))
+        .cornerRadius(25)
+        .padding(.horizontal, 20)
     }
 }
 
@@ -160,61 +238,5 @@ struct TripCardView: View {
                 Text(trip.hadSleepWarning ? "Alarm Triggered. Sleep risk detected." : "Perfectly alert. Safe driving patterns detected.").font(.caption).foregroundColor(.secondary).fixedSize(horizontal: false, vertical: true)
             }.padding(10).background(trip.hadSleepWarning ? Color.orange.opacity(0.1) : Color.green.opacity(0.1)).cornerRadius(8)
         }.padding().background(Color(UIColor.tertiarySystemBackground)).cornerRadius(15).shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 5).padding(.horizontal, 20)
-    }
-}
-
-struct DriveModeView: View {
-    @StateObject private var connectivity = ConnectivityManager.shared
-    @StateObject private var locationManager = LocationManager()
-    
-    var body: some View {
-        VStack(spacing: 20) {
-            Text("LIVE TELEMETRY").font(.headline).foregroundColor(connectivity.currentSleepScore == -1 ? .blue : .green).padding(.top, 60)
-            
-            VStack(spacing: 5) {
-                if connectivity.currentSleepScore == -1 {
-                    Image(systemName: "waveform.path.ecg").font(.system(size: 40)).foregroundColor(.blue)
-                    Text("CALIBRATING").font(.system(size: 40, weight: .black, design: .rounded)).foregroundColor(.blue).padding(.vertical, 10)
-                    Text("Establishing vital baselines...").font(.subheadline).bold().foregroundColor(.secondary)
-                } else {
-                    Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 40))
-                        // Controls the UI color of the risk score based on the current stage danger level.
-                        .foregroundColor(connectivity.currentSleepScore >= 70 ? .red : (connectivity.currentSleepScore >= 40 ? .orange : .green))
-                    Text("\(connectivity.currentSleepScore)").font(.system(size: 100, weight: .black, design: .rounded))
-                    Text("SLEEP RISK SCORE").font(.subheadline).bold().foregroundColor(.secondary)
-                }
-            }
-            .frame(maxWidth: .infinity).padding(.vertical, 40).background(Color(UIColor.secondarySystemBackground)).cornerRadius(30).padding(.horizontal, 20)
-            
-            HStack(spacing: 15) {
-                StatusBubble(title: "Heart Rate", value: "\(Int(connectivity.currentHeartRate))", unit: "BPM", icon: "heart.fill", color: .red)
-                StatusBubble(title: "Motion", value: connectivity.isStill ? "Still" : "Active", unit: "Wrist", icon: connectivity.isStill ? "hand.raised.slash.fill" : "hand.wave.fill", color: .orange)
-                StatusBubble(title: "Speed", value: "\(locationManager.currentSpeed < 5 ? 0 : locationManager.currentSpeed)", unit: "km/h", icon: "speedometer", color: .blue)
-            }.padding(.horizontal, 20)
-            
-            Spacer()
-            
-            Button(action: {
-                connectivity.sendDriveStatus(isStarting: false)
-            }) {
-                Text("End Drive Mode").font(.title3).bold().foregroundColor(.white).frame(maxWidth: .infinity).padding().background(Color.red).cornerRadius(15).padding(.horizontal, 20)
-            }.padding(.bottom, 20)
-        }
-        // Records the driver's current speed and heart rate every 5 seconds to calculate the final trip averages.
-        .onReceive(Timer.publish(every: 5, on: .main, in: .common).autoconnect()) { _ in
-            let cleanSpeed = locationManager.currentSpeed < 5 ? 0 : locationManager.currentSpeed
-            connectivity.addTelemetry(speed: cleanSpeed, hr: connectivity.currentHeartRate)
-        }
-    }
-}
-
-struct StatusBubble: View {
-    var title: String; var value: String; var unit: String; var icon: String; var color: Color
-    var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: icon).font(.headline).foregroundColor(color)
-            Text(value).font(.system(size: 22, weight: .bold, design: .rounded)).lineLimit(1).minimumScaleFactor(0.5)
-            VStack(spacing: 2) { Text(title).font(.system(size: 10, weight: .bold)); Text(unit).font(.system(size: 9)).foregroundColor(.secondary) }
-        }.frame(maxWidth: .infinity).padding(.vertical, 15).background(Color(UIColor.secondarySystemBackground)).cornerRadius(20)
     }
 }
