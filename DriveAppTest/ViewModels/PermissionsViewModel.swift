@@ -30,8 +30,10 @@ class PermissionsViewModel: NSObject, ObservableObject, CLLocationManagerDelegat
         
         let heartRateType = HKQuantityType.quantityType(forIdentifier: .heartRate)!
         let hrvType = HKQuantityType.quantityType(forIdentifier: .heartRateVariabilitySDNN)!
+        // 🚨 NEW: Added Sleep Analysis to the requested types
+        let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis)!
         
-        let typesToRead: Set = [heartRateType, hrvType]
+        let typesToRead: Set = [heartRateType, hrvType, sleepType]
         
         healthStore.requestAuthorization(toShare: nil, read: typesToRead) { success, error in
             if let error = error {

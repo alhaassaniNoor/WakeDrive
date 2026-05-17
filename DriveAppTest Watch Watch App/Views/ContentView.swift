@@ -1,5 +1,23 @@
 import SwiftUI
 
+// MARK: - Hex Color Extension
+extension Color {
+    init(hex: String) {
+        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        var int: UInt64 = 0
+        Scanner(string: hex).scanHexInt64(&int)
+        let a, r, g, b: UInt64
+        switch hex.count {
+        case 3: (a, r, g, b) = (255, (int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
+        case 6: (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
+        case 8: (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
+        default: (a, r, g, b) = (1, 1, 1, 0)
+        }
+        self.init(.sRGB, red: Double(r) / 255, green: Double(g) / 255, blue:  Double(b) / 255, opacity: Double(a) / 255)
+    }
+}
+
+// MARK: - Main Content View
 struct ContentView: View {
     @StateObject private var viewModel = WatchDriveViewModel()
     
@@ -7,105 +25,207 @@ struct ContentView: View {
         Group {
             if viewModel.isDriving {
                 TabView {
-                    AlertColorScreen(viewModel: viewModel)
+                    AlertDialScreen(viewModel: viewModel)
                     WatchLiveDashboard(viewModel: viewModel)
                 }
                 .tabViewStyle(PageTabViewStyle(indexDisplayMode: .automatic))
             } else {
-                VStack(spacing: 15) {
-                    Image(systemName: "steeringwheel").font(.title).foregroundColor(.blue)
-                    Text("Ready").font(.headline)
-                    Button(action: {
-                        viewModel.startTripFromWatch()
-                    }) {
-                        Text("Start Drive Mode")
-                            .font(.subheadline).bold().foregroundColor(.black).frame(maxWidth: .infinity)
-                            .padding().background(Color.yellow).cornerRadius(12)
-                    }.buttonStyle(PlainButtonStyle())
-                }.padding()
+                StartScreen(viewModel: viewModel)
             }
         }
     }
 }
 
-struct AlertColorScreen: View {
+// MARK: - 1. The Start Screen
+struct StartScreen: View {
     @ObservedObject var viewModel: WatchDriveViewModel
     
-    var riskColor: Color {
-        if viewModel.currentScore >= 90 { return .red }
-        if viewModel.currentScore >= 70 { return .orange }
-        if viewModel.currentScore >= 40 { return .yellow }
-        return .green
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+            
+            Image("bird")
+                .resizable()
+                .scaledToFill()
+                .scaleEffect(1.05)
+                .offset(x: -10, y: 50)
+                .ignoresSafeArea()
+            
+            // The Start Button (Acting as the Eye)
+            Button(action: {
+                viewModel.startTripFromWatch()
+            }) {
+                ZStack {
+                    Circle().fill(Color.black)
+                    Text("Start")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.white)
+                }
+            }
+            .frame(width: 75, height: 75)
+            .buttonStyle(PlainButtonStyle())
+            // 🚨 NUDGED UP AGAIN: Changed y from 0 to -10
+            .offset(x: -38, y: -10)
+        }
+    }
+}
+
+// MARK: - 2. The Alert Dial Screen
+struct AlertDialScreen: View {
+    @ObservedObject var viewModel: WatchDriveViewModel
+    
+    var stageColor: Color {
+        if viewModel.currentScore >= 90 { return Color(hex: "D20A0A") }
+        if viewModel.currentScore >= 70 { return Color(hex: "FF8104") }
+        if viewModel.currentScore >= 40 { return Color(hex: "FEB504") }
+        return Color(hex: "00D543")
+    }
+    
+    var stageText: String {
+        if viewModel.currentScore == -1 { return "Calibrating..." }
+        if viewModel.currentScore >= 90 { return "SHAKE WRIST" }
+        if viewModel.currentScore >= 70 { return "Unstable" }
+        if viewModel.currentScore >= 40 { return "Losing Focus" }
+        return "Stable"
     }
     
     var body: some View {
         ZStack {
-            riskColor.edgesIgnoringSafeArea(.all)
-            VStack {
+            Color.black.ignoresSafeArea()
+            
+            let safeScore = max(0.0, min(100.0, Double(viewModel.currentScore)))
+            let progress = safeScore / 100.0
+            
+            let arcWidth: CGFloat = 200
+            
+            ZStack {
+                // The Colored Dome Background
+                Circle()
+                    .fill(stageColor)
+                    .frame(width: 230, height: 230)
+                
+                // The Faded Background Track
+                Circle()
+                    .trim(from: 0.5, to: 1.0)
+                    .stroke(Color.white.opacity(0.3), style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                    .frame(width: arcWidth, height: arcWidth)
+                
+                // The Filled White Progress Track
+                Circle()
+                    .trim(from: 0.5, to: 0.5 + (0.5 * progress))
+                    .stroke(Color.white, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                    .frame(width: arcWidth, height: arcWidth)
+                
+                // The Bird Dot
+                BirdDot()
+                    .offset(x: -(arcWidth / 2))
+                    .rotationEffect(.degrees(180 * progress))
+            }
+            .offset(y: 85)
+            
+            // Stage Text
+            VStack(spacing: 2) {
+                Text(stageText)
+                    .font(.system(size: viewModel.currentScore >= 90 ? 18 : 22, weight: .bold))
+                    .foregroundColor(.white)
+                
                 if viewModel.currentScore >= 90 {
-                    VStack(spacing: 8) {
-                        Image(systemName: "waveform.path.ecg.rectangle.fill").font(.system(size: 40)).foregroundColor(.white)
-                        Text("SHAKE WRIST").font(.headline).fontWeight(.black).foregroundColor(.white)
-                        Text("to dismiss alarm").font(.caption).foregroundColor(.white.opacity(0.8))
-                    }
-                } else {
-                    Spacer()
-                    Image(systemName: "car.fill").font(.system(size: 60)).foregroundColor(.white.opacity(0.9))
-                    Spacer()
+                    Text("to dismiss alarm")
+                        .font(.system(size: 12))
+                        .foregroundColor(.white.opacity(0.9))
                 }
             }
+            .offset(y: 65)
         }
     }
 }
 
+// MARK: - The Bird Dot Component
+struct BirdDot: View {
+    var body: some View {
+        ZStack {
+            // Beak
+            Path { p in
+                p.move(to: CGPoint(x: 6, y: 18))
+                p.addLine(to: CGPoint(x: 18, y: -4))
+                p.addLine(to: CGPoint(x: 30, y: 18))
+            }
+            .fill(Color(hex: "FEB504"))
+            
+            // White Eye
+            Circle()
+                .fill(Color.white)
+                .frame(width: 26, height: 26)
+            
+            // Black Pupil
+            Circle()
+                .fill(Color.black)
+                .frame(width: 14, height: 14)
+        }
+        .frame(width: 36, height: 36)
+    }
+}
+
+// MARK: - 3. The Live Telemetry Dashboard
 struct WatchLiveDashboard: View {
     @ObservedObject var viewModel: WatchDriveViewModel
     
+    var stageColor: Color {
+        if viewModel.currentScore >= 90 { return Color(hex: "D20A0A") }
+        if viewModel.currentScore >= 70 { return Color(hex: "FF8104") }
+        if viewModel.currentScore >= 40 { return Color(hex: "FEB504") }
+        return Color(hex: "00D543")
+    }
+    
     var body: some View {
-        ScrollView {
-            VStack(spacing: 10) {
-                Text("LIVE TELEMETRY")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(viewModel.currentScore == -1 ? .blue : .green)
-                
-                VStack(spacing: 5) {
+        ZStack {
+            Color.black.ignoresSafeArea()
+            
+            VStack(spacing: 15) {
+                ZStack {
+                    Circle()
+                        .fill(stageColor)
+                        .frame(width: 90, height: 90)
+                    
                     if viewModel.currentScore == -1 {
-                        Image(systemName: "waveform.path.ecg").font(.system(size: 24)).foregroundColor(.blue)
-                        Text("CALIBRATING").font(.system(size: 18, weight: .black, design: .rounded)).foregroundColor(.blue)
+                        Text("--%")
+                            .font(.title).bold()
+                            .foregroundColor(.white)
                     } else {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(viewModel.currentScore >= 70 ? .red : (viewModel.currentScore >= 40 ? .orange : .green))
-                        Text("\(viewModel.currentScore)")
-                            .font(.system(size: 45, weight: .black, design: .rounded))
+                        Text("\(viewModel.currentScore)%")
+                            .font(.title).bold()
+                            .foregroundColor(.white)
                     }
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                .background(Color.white.opacity(0.1))
-                .cornerRadius(15)
+                .padding(.top, 10)
                 
-                HStack(spacing: 8) {
-                    WatchStatusBubble(title: "HR", value: "\(Int(viewModel.currentBPM))", unit: "BPM", icon: "heart.fill", color: .red)
-                    WatchStatusBubble(title: "Motion", value: viewModel.isStill ? "Still" : "Active", unit: "Wrist", icon: viewModel.isStill ? "hand.raised.slash.fill" : "hand.wave.fill", color: .orange)
+                // Telemetry Stats
+                HStack(spacing: 25) {
+                    VStack(spacing: 2) {
+                        HStack(alignment: .lastTextBaseline, spacing: 1) {
+                            Text("\(Int(viewModel.currentBPM))").font(.title3).bold().foregroundColor(.white)
+                            Text("bpm").font(.system(size: 10)).foregroundColor(.gray)
+                        }
+                        Text("Heart Rate").font(.system(size: 9, weight: .bold)).foregroundColor(Color(hex: "D20A0A"))
+                    }
+                    
+                    VStack(spacing: 2) {
+                        HStack(alignment: .lastTextBaseline, spacing: 1) {
+                            Text("0").font(.title3).bold().foregroundColor(.white)
+                            Text("km").font(.system(size: 10)).foregroundColor(.gray)
+                        }
+                        Text("Speed").font(.system(size: 9, weight: .bold)).foregroundColor(Color(hex: "247FA6"))
+                    }
                 }
+                
+                // Wrist Activity
+                VStack(spacing: 2) {
+                    Text(viewModel.isStill ? "Still" : "Active").font(.system(size: 14)).foregroundColor(.white)
+                    Text("Wrist Activity").font(.system(size: 10, weight: .bold)).foregroundColor(Color(hex: "00D543"))
+                }
+                
+                Spacer()
             }
-            .padding(.horizontal, 5)
         }
-    }
-}
-
-struct WatchStatusBubble: View {
-    var title: String; var value: String; var unit: String; var icon: String; var color: Color
-    var body: some View {
-        VStack(spacing: 4) {
-            Image(systemName: icon).font(.caption).foregroundColor(color)
-            Text(value).font(.system(size: 16, weight: .bold, design: .rounded)).lineLimit(1).minimumScaleFactor(0.5)
-            VStack(spacing: 0) { Text(title).font(.system(size: 8, weight: .bold)); Text(unit).font(.system(size: 7)).foregroundColor(.secondary) }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
-        .background(Color.white.opacity(0.1))
-        .cornerRadius(12)
     }
 }
