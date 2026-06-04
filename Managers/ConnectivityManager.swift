@@ -7,6 +7,7 @@ struct TripSummaryData: Equatable {
     let duration: String
     let speed: Int
     let hr: Int
+    let avgRiskScore: Int
     let warning: Bool
 }
 
@@ -26,6 +27,7 @@ class ConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
     private var tripStartDate: Date?
     private var speedReadings: [Int] = []
     private var hrReadings: [Double] = []
+    private var riskReadings: [Int] = []
     private var hadWarning: Bool = false
     #endif
     
@@ -48,6 +50,7 @@ class ConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
                 self.tripStartDate = Date()
                 self.speedReadings = []
                 self.hrReadings = []
+                self.riskReadings = []
                 self.hadWarning = false
                 #endif
             } else {
@@ -113,12 +116,14 @@ class ConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
         
         let avgSpd = speedReadings.isEmpty ? 0 : speedReadings.reduce(0, +) / speedReadings.count
         let avgHeart = hrReadings.isEmpty ? 0 : Int(hrReadings.reduce(0, +) / Double(hrReadings.count))
+        let avgRisk = riskReadings.isEmpty ? 0 : riskReadings.reduce(0, +) / riskReadings.count
         
         self.newlyCompletedTripData = TripSummaryData(
             date: dateString,
             duration: "\(durationMinutes) mins",
             speed: avgSpd,
             hr: avgHeart,
+            avgRiskScore: avgRisk,
             warning: hadWarning
         )
         
@@ -142,6 +147,7 @@ class ConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
                     self.tripStartDate = Date()
                     self.speedReadings = []
                     self.hrReadings = []
+                    self.riskReadings = []
                     self.hadWarning = false
                 }
                 #endif
@@ -152,6 +158,10 @@ class ConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
             if let score = dict["sleepScore"] as? Int {
                 self.currentSleepScore = score
                 #if os(iOS)
+                // 🚨 FIX: Ignore negative calibration scores (-1)
+                if score >= 0 {
+                    self.riskReadings.append(score)
+                }
                 if score >= 70 { self.hadWarning = true }
                 #endif
             }

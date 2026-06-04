@@ -18,25 +18,17 @@ class MotionManager: ObservableObject {
     private var hapticTimer: Timer?
     private var hapticTicks = 0
     private var activeStage = 0
-    
     private var shakeBuffer: [Double] = []
-    
-    private var calibrationSeconds = 0
-    private let CALIBRATION_LIMIT = 60
-    private var hrReadings: [Double] = []
-    private var dynamicHRDropThreshold: Double = 60.0
     
     func startTracking() {
         stopTracking()
         guard motionManager.isDeviceMotionAvailable else { return }
         
-        motionDangerScore = -1
+        motionDangerScore = 0
         isStill = false
         lastMovementTime = Date()
         activeStage = 0
         shakeBuffer.removeAll()
-        calibrationSeconds = 0
-        hrReadings = []
         
         startWorkoutSession()
         startHeartRateQuery()
@@ -73,14 +65,9 @@ class MotionManager: ObservableObject {
     }
     
     private func analyzeMovement(_ motion: CMDeviceMotion) {
-        if calibrationSeconds < CALIBRATION_LIMIT { return }
-        
         let totalForce = abs(motion.userAcceleration.x) + abs(motion.userAcceleration.y) + abs(motion.userAcceleration.z)
-        
         shakeBuffer.append(totalForce)
-        if shakeBuffer.count > 15 {
-            shakeBuffer.removeFirst()
-        }
+        if shakeBuffer.count > 15 { shakeBuffer.removeFirst() }
         
         if motionDangerScore >= 90 {
             let averageForce = shakeBuffer.reduce(0, +) / Double(shakeBuffer.count)
@@ -105,21 +92,6 @@ class MotionManager: ObservableObject {
     }
     
     private func evaluateRealData() {
-        if calibrationSeconds < CALIBRATION_LIMIT {
-            calibrationSeconds += 1
-            if currentBPM > 40 { hrReadings.append(currentBPM) }
-            
-            if calibrationSeconds == CALIBRATION_LIMIT {
-                let sum = hrReadings.reduce(0, +)
-                let avg = hrReadings.isEmpty ? 75.0 : sum / Double(hrReadings.count)
-                dynamicHRDropThreshold = avg * 0.85
-                updateScore(to: 0)
-            } else {
-                updateScore(to: -1)
-            }
-            return
-        }
-        
         let secondsSinceLastMove = Date().timeIntervalSince(lastMovementTime)
         var scoreIncrement = 0
         
@@ -130,7 +102,7 @@ class MotionManager: ObservableObject {
             isStill = false
         }
         
-        if currentBPM > 0 && currentBPM < dynamicHRDropThreshold {
+        if currentBPM > 0 && currentBPM < 65.0 {
             scoreIncrement += 1
         }
         
@@ -153,72 +125,41 @@ class MotionManager: ObservableObject {
             if targetStage == 3 { triggerStage3() }
             else if targetStage == 2 { triggerStage2() }
             else if targetStage == 1 { triggerStage1() }
-            else {
-                stopHaptics()
-                activeStage = 0
-            }
+            else { stopHaptics(); activeStage = 0 }
         }
     }
     
     private func triggerStage1() {
-        stopHaptics()
-        activeStage = 1
-        hapticTicks = 0
+        stopHaptics(); activeStage = 1; hapticTicks = 0
         hapticTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [weak self] _ in
-            guard let self = self else { return }
-            if self.activeStage != 1 { return }
-            if self.hapticTicks < 50 {
-                WKInterfaceDevice.current().play(.start)
-                self.hapticTicks += 1
-            } else {
-                self.stopHaptics()
-                self.lastMovementTime = Date()
-            }
+            guard let self = self, self.activeStage == 1 else { return }
+            if self.hapticTicks < 50 { WKInterfaceDevice.current().play(.start); self.hapticTicks += 1 }
+            else { self.stopHaptics(); self.lastMovementTime = Date() }
         }
     }
     
     private func triggerStage2() {
-        stopHaptics()
-        activeStage = 2
-        hapticTicks = 0
+        stopHaptics(); activeStage = 2; hapticTicks = 0
         hapticTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [weak self] _ in
-            guard let self = self else { return }
-            if self.activeStage != 2 { return }
-            if self.hapticTicks < 66 {
-                WKInterfaceDevice.current().play(.start)
-                self.hapticTicks += 1
-            } else if self.hapticTicks == 66 {
-                ConnectivityManager.shared.sendCommand("speakStage2")
-                self.hapticTicks += 1
-            } else {
-                self.stopHaptics()
-                self.lastMovementTime = Date()
-            }
+            guard let self = self, self.activeStage == 2 else { return }
+            if self.hapticTicks < 66 { WKInterfaceDevice.current().play(.start); self.hapticTicks += 1 }
+            else if self.hapticTicks == 66 { ConnectivityManager.shared.sendCommand("speakStage2"); self.hapticTicks += 1 }
+            else { self.stopHaptics(); self.lastMovementTime = Date() }
         }
     }
     
     private func triggerStage3() {
-        stopHaptics()
-        activeStage = 3
-        hapticTicks = 0
+        stopHaptics(); activeStage = 3; hapticTicks = 0
         hapticTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [weak self] _ in
-            guard let self = self else { return }
-            if self.activeStage != 3 { return }
+            guard let self = self, self.activeStage == 3 else { return }
             let cycleTick = self.hapticTicks % 100
-            if cycleTick < 83 {
-                WKInterfaceDevice.current().play(.start)
-            } else if cycleTick == 83 {
-                ConnectivityManager.shared.sendCommand("speakStage3")
-            }
+            if cycleTick < 83 { WKInterfaceDevice.current().play(.start) }
+            else if cycleTick == 83 { ConnectivityManager.shared.sendCommand("speakStage3") }
             self.hapticTicks += 1
         }
     }
 
-    private func stopHaptics() {
-        hapticTimer?.invalidate()
-        hapticTimer = nil
-    }
-
+    private func stopHaptics() { hapticTimer?.invalidate(); hapticTimer = nil }
     private func updateScore(to newScore: Int) {
         DispatchQueue.main.async {
             self.motionDangerScore = newScore
@@ -246,7 +187,7 @@ class MotionManager: ObservableObject {
     
     private func fetchLatestHeartRate() {
         let heartRateType = HKQuantityType.quantityType(forIdentifier: .heartRate)!
-        let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
+        let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
         let query = HKSampleQuery(sampleType: heartRateType, predicate: nil, limit: 1, sortDescriptors: [sortDescriptor]) { [weak self] _, results, _ in
             guard let sample = results?.first as? HKQuantitySample else { return }
             let bpm = sample.quantity.doubleValue(for: HKUnit.count().unitDivided(by: HKUnit.minute()))

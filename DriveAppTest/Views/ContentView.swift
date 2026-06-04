@@ -12,22 +12,12 @@ extension Color {
         Scanner(string: hex).scanHexInt64(&int)
         let a, r, g, b: UInt64
         switch hex.count {
-        case 3:
-            (a, r, g, b) = (255, (int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
-        case 6:
-            (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
-        case 8:
-            (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
-        default:
-            (a, r, g, b) = (1, 1, 1, 0)
+        case 3: (a, r, g, b) = (255, (int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
+        case 6: (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
+        case 8: (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
+        default: (a, r, g, b) = (1, 1, 1, 0)
         }
-        self.init(
-            .sRGB,
-            red: Double(r) / 255,
-            green: Double(g) / 255,
-            blue:  Double(b) / 255,
-            opacity: Double(a) / 255
-        )
+        self.init(.sRGB, red: Double(r) / 255, green: Double(g) / 255, blue:  Double(b) / 255, opacity: Double(a) / 255)
     }
 }
 
@@ -35,11 +25,14 @@ extension Color {
 struct ContentView: View {
     @AppStorage("hasCompletedOnboarding") var hasCompletedOnboarding: Bool = false
     @StateObject private var connectivity = ConnectivityManager.shared
+    @StateObject private var permissions = PermissionsViewModel()
     
     var body: some View {
         Group {
-            if !hasCompletedOnboarding {
-                MasterOnboardingView(hasCompleted: $hasCompletedOnboarding)
+            if permissions.isDenied {
+                PermissionsDeniedView()
+            } else if !hasCompletedOnboarding {
+                MasterOnboardingView(hasCompleted: $hasCompletedOnboarding, permissions: permissions)
             } else if !connectivity.isWatchAppInstalled {
                 WatchSetupView()
             } else {
@@ -50,18 +43,56 @@ struct ContentView: View {
     }
 }
 
+// MARK: - Hard Stop Permissions View
+struct PermissionsDeniedView: View {
+    var body: some View {
+        ZStack {
+            Color.black.edgesIgnoringSafeArea(.all)
+            VStack(spacing: 30) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 80))
+                    .foregroundColor(Color(hex: "FEB504"))
+                
+                Text("Access Required")
+                    .font(.title).bold()
+                    .foregroundColor(.white)
+                
+                Text("Copirrot requires Location and Health access to monitor driving safety and detect drowsiness in real-time. We cannot protect you without these permissions.")
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(.gray)
+                    .padding(.horizontal, 40)
+                
+                Button(action: {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                }) {
+                    Text("Open Settings to Allow")
+                        .font(.headline).bold()
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(Color(hex: "247FA6"))
+                        .cornerRadius(30)
+                }
+                .padding(.horizontal, 40)
+                .padding(.top, 20)
+            }
+        }
+    }
+}
+
 // MARK: - Onboarding Flow
 struct MasterOnboardingView: View {
     @Binding var hasCompleted: Bool
+    @ObservedObject var permissions: PermissionsViewModel
     @State private var step = 1
-    @StateObject private var permissions = PermissionsViewModel()
     @AppStorage("userName") var userName: String = ""
-    @AppStorage("userGender") var userGender: String = "Not Specified"
     
     var body: some View {
         GeometryReader { geo in
             ZStack {
-                Color(hex: "000000").edgesIgnoringSafeArea(.all)
+                Color.black.edgesIgnoringSafeArea(.all)
                 
                 if step == 1 {
                     VStack(alignment: .leading) {
@@ -71,7 +102,6 @@ struct MasterOnboardingView: View {
                             .padding(.top, 80)
                             .padding(.horizontal, 30)
                         Spacer()
-                        
                         HStack(spacing: 0) {
                             Image("bird")
                                 .resizable()
@@ -100,9 +130,7 @@ struct MasterOnboardingView: View {
                             .foregroundColor(.white.opacity(0.9))
                             .padding(.top, 10)
                             .padding(.horizontal, 30)
-                        
                         Spacer()
-                        
                         HStack(spacing: 0) {
                             Image("bird")
                                 .resizable()
@@ -117,7 +145,7 @@ struct MasterOnboardingView: View {
                     
                 } else if step == 3 {
                     VStack(alignment: .leading, spacing: 35) {
-                        Text("Welcome to\nDREM")
+                        Text("Welcome to\nCopirrot")
                             .font(.system(size: 36, weight: .bold))
                             .foregroundColor(.white)
                             .padding(.top, 60)
@@ -128,9 +156,7 @@ struct MasterOnboardingView: View {
                             PermissionRow(icon: "bell", title: "Notifications", desc: "We want to send you smart alerts in real-time.")
                         }
                         .padding(.top, 40)
-                        
                         Spacer()
-                        
                         Button(action: {
                             permissions.requestAllPermissions()
                             withAnimation { step = 4 }
@@ -154,7 +180,7 @@ struct MasterOnboardingView: View {
                             .foregroundColor(.white)
                             .padding(.top, 60)
                         
-                        Text("Tell us a bit about yourself to personalize your experience.")
+                        Text("We want to know your name to personalize your experience.")
                             .font(.body)
                             .foregroundColor(.gray)
                         
@@ -169,17 +195,6 @@ struct MasterOnboardingView: View {
                                 .foregroundColor(.white)
                         }
                         
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("Gender")
-                                .font(.headline)
-                                .foregroundColor(.white)
-                            
-                            HStack(spacing: 15) {
-                                GenderButton(title: "Female", selected: $userGender)
-                                GenderButton(title: "Male", selected: $userGender)
-                            }
-                        }
-                        
                         Spacer()
                         
                         Button(action: {
@@ -190,10 +205,10 @@ struct MasterOnboardingView: View {
                                 .foregroundColor(.white)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 16)
-                                .background(userName.isEmpty || userGender == "Not Specified" ? Color.gray : Color(hex: "247FA6"))
+                                .background(userName.isEmpty ? Color.gray : Color(hex: "247FA6"))
                                 .cornerRadius(30)
                         }
-                        .disabled(userName.isEmpty || userGender == "Not Specified")
+                        .disabled(userName.isEmpty)
                         .padding(.bottom, 40)
                     }
                     .padding(.horizontal, 30)
@@ -219,47 +234,23 @@ struct PermissionRow: View {
     }
 }
 
-struct GenderButton: View {
-    let title: String
-    @Binding var selected: String
-    var body: some View {
-        Button(action: { selected = title }) {
-            Text(title)
-                .font(.headline)
-                .foregroundColor(selected == title ? .white : .gray)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 15)
-                .background(selected == title ? Color(hex: "247FA6").opacity(0.3) : Color(UIColor.systemGray6))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 15)
-                        .stroke(selected == title ? Color(hex: "247FA6") : Color.clear, lineWidth: 2)
-                )
-                .cornerRadius(15)
-        }
-    }
-}
-
 // MARK: - Watch Setup
 struct WatchSetupView: View {
     var body: some View {
         ZStack {
-            Color(hex: "000000").edgesIgnoringSafeArea(.all)
+            Color.black.edgesIgnoringSafeArea(.all)
             VStack(spacing: 40) {
                 Spacer()
-                
                 Image(systemName: "applewatch.and.arrow.forward")
                     .font(.system(size: 100))
                     .foregroundColor(Color(hex: "FEB504"))
-                
                 Text("Connect Apple Watch")
                     .font(.title2).bold()
                     .foregroundColor(.white)
-                
-                Text("DREM needs the Apple Watch app to monitor heart rate and arm movement.")
+                Text("Copirrot needs the Apple Watch app to monitor heart rate and arm movement.")
                     .multilineTextAlignment(.center)
                     .foregroundColor(.gray)
                     .padding(.horizontal, 40)
-                
                 VStack(alignment: .center, spacing: 25) {
                     Text("1) Close this app and open the 'Watch' app.")
                     Text("2) Scroll to the bottom and tap 'Install'.")
@@ -268,9 +259,7 @@ struct WatchSetupView: View {
                 .foregroundColor(.white)
                 .padding(.horizontal, 30)
                 .padding(.top, 20)
-                
                 Spacer()
-                
                 HStack {
                     ProgressView().progressViewStyle(CircularProgressViewStyle(tint: .gray)).padding(.trailing, 5)
                     Text("Waiting for connection...")
@@ -287,10 +276,9 @@ struct WatchSetupView: View {
 struct HomeView: View {
     @AppStorage("userName") var userName: String = ""
     @StateObject private var connectivity = ConnectivityManager.shared
-    @StateObject private var locationManager = LocationManager()
     @StateObject private var sleepManager = SleepManager()
-    
     @State private var showProfileEdit = false
+    @State private var showInfoSheet = false
     
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Trip.date, order: .reverse) private var pastTrips: [Trip]
@@ -298,17 +286,22 @@ struct HomeView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                Color(hex: "000000").edgesIgnoringSafeArea(.all)
+                Color.black.edgesIgnoringSafeArea(.all)
                 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 25) {
-                        
                         // Header
-                        HStack {
+                        HStack(spacing: 15) {
                             Text("Hello \(userName.isEmpty ? "Driver" : userName),")
                                 .font(.system(size: 32, weight: .bold))
                                 .foregroundColor(.white)
                             Spacer()
+                            
+                            Button(action: { showInfoSheet = true }) {
+                                Image(systemName: "info.circle")
+                                    .font(.title2)
+                                    .foregroundColor(.gray)
+                            }
                             
                             Button(action: { showProfileEdit = true }) {
                                 Circle()
@@ -334,58 +327,86 @@ struct HomeView: View {
                                 .font(.title3).bold()
                                 .foregroundColor(.white)
                             
-                            Text("Start the trip directly from your Apple Watch. Your phone will automatically become your dashboard.")
+                            Text("Start the trip directly from your Apple Watch.")
                                 .font(.subheadline)
                                 .foregroundColor(.gray)
                         }
                         .padding(25)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color(red: 0.12, green: 0.12, blue: 0.13))
+                        .background(Color(hex: "1C1C1E"))
                         .cornerRadius(20)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 20)
+                                .stroke(Color(hex: "247FA6"), lineWidth: 0.5)
+                        )
                         .padding(.horizontal, 20)
                         
-                        // Quick State Section
                         Text("Today's Overview")
                             .font(.title3).bold()
                             .foregroundColor(.white)
                             .padding(.horizontal, 20)
                             .padding(.top, 10)
                         
-                        // HealthKit Sleep Risk Card
-                        HStack {
-                            Circle()
-                                .fill(Color(hex: "5E5CE6"))
-                                .frame(width: 50, height: 50)
-                                .overlay(Image(systemName: "bed.double.fill").foregroundColor(.white))
-                            
-                            VStack(alignment: .leading, spacing: 5) {
-                                Text("Sleep Readiness").font(.headline).foregroundColor(.white)
+                        // Sleep Card
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack(alignment: .center) {
+                                Image(systemName: "bed.double.fill")
+                                    .foregroundColor(Color(hex: "5E5CE6"))
+                                    .font(.system(size: 15, weight: .medium))
                                 
-                                HStack(alignment: .lastTextBaseline, spacing: 2) {
-                                    Text(sleepManager.sleepText).font(.system(size: 24, weight: .bold)).foregroundColor(.white)
-                                }
-                                Text("Total Rest").font(.caption).foregroundColor(.gray)
-                            }
-                            .padding(.leading, 10)
-                            
-                            Spacer()
-                            
-                            if sleepManager.sleepText != "Not Recorded" {
-                                VStack(alignment: .trailing, spacing: 15) {
-                                    HStack(spacing: 5) {
-                                        Circle().fill(sleepManager.statusColor).frame(width: 8, height: 8)
-                                        Text(sleepManager.statusText).font(.caption).bold().foregroundColor(.white)
+                                Text("Sleep")
+                                    .foregroundColor(Color(hex: "5E5CE6"))
+                                    .font(.system(size: 15, weight: .medium))
+                                
+                                Spacer()
+                                
+                                if sleepManager.hasData {
+                                    HStack(spacing: 6) {
+                                        Circle()
+                                            .fill(sleepManager.statusColor)
+                                            .frame(width: 8, height: 8)
+                                            .overlay(Circle().stroke(Color.black.opacity(0.4), lineWidth: 1.5))
+                                        Text(sleepManager.badgeText)
+                                            .font(.caption).bold()
+                                            .foregroundColor(.white)
                                     }
-                                    Text(sleepManager.badgeText)
-                                        .font(.caption2).bold()
-                                        .foregroundColor(sleepManager.statusColor)
-                                        .padding(.horizontal, 10).padding(.vertical, 4)
-                                        .background(sleepManager.statusColor.opacity(0.2)).cornerRadius(5)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(Color(hex: "2C2C2E"))
+                                    .clipShape(Capsule())
                                 }
+                            }
+                            
+                            Text("Time Asleep")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                                .padding(.top, 8)
+                            
+                            if sleepManager.hasData {
+                                HStack(alignment: .firstTextBaseline, spacing: 2) {
+                                    Text("\(sleepManager.sleepHours)")
+                                        .font(.system(size: 30, weight: .semibold, design: .rounded))
+                                        .foregroundColor(.white)
+                                    Text("hr")
+                                        .font(.body)
+                                        .foregroundColor(.gray)
+                                        .padding(.trailing, 4)
+                                    
+                                    Text("\(sleepManager.sleepMinutes)")
+                                        .font(.system(size: 30, weight: .semibold, design: .rounded))
+                                        .foregroundColor(.white)
+                                    Text("min")
+                                        .font(.body)
+                                        .foregroundColor(.gray)
+                                }
+                            } else {
+                                Text("No data")
+                                    .font(.system(size: 20, weight: .medium, design: .rounded))
+                                    .foregroundColor(.gray.opacity(0.6))
                             }
                         }
                         .padding(20)
-                        .background(Color(red: 0.12, green: 0.12, blue: 0.13))
+                        .background(Color(hex: "1C1C1E"))
                         .cornerRadius(20)
                         .padding(.horizontal, 20)
                         
@@ -393,40 +414,22 @@ struct HomeView: View {
                         NavigationLink(destination: SummaryView()) {
                             HStack {
                                 VStack(alignment: .leading, spacing: 10) {
-                                    Text("Summary").font(.headline).foregroundColor(.white)
-                                    
-                                    if pastTrips.isEmpty && !connectivity.isDriving {
-                                        Text("Not Recorded").font(.caption).foregroundColor(.gray.opacity(0.7))
-                                    } else {
-                                        HStack(spacing: 5) {
-                                            Circle().fill(Color(hex: "FEB504")).frame(width: 8, height: 8)
-                                            Text("Weekly View").font(.caption).foregroundColor(.gray)
-                                        }
-                                    }
+                                    Text("Weekly Summary").font(.headline).foregroundColor(.white)
+                                    Text("\(pastTrips.count) Trips Recorded").font(.subheadline).foregroundColor(.gray)
                                 }
                                 Spacer()
-                                
-                                HStack(alignment: .bottom, spacing: 4) {
-                                    let emptyHeights: [CGFloat] = [10, 15, 12, 20, 25, 18, 15, 10]
-                                    ForEach(0..<8) { i in
-                                        RoundedRectangle(cornerRadius: 2)
-                                            .fill(pastTrips.isEmpty && !connectivity.isDriving ? Color.gray.opacity(0.2) : (i == 6 ? Color(hex: "247FA6") : Color.gray.opacity(0.3)))
-                                            .frame(width: 4, height: pastTrips.isEmpty && !connectivity.isDriving ? emptyHeights[i] : CGFloat.random(in: 10...30))
-                                    }
-                                }
-                                .padding(.trailing, 10)
-                                
                                 HStack {
-                                    Text("Today").font(.subheadline).foregroundColor(.white)
-                                    Image(systemName: "arrow.right").font(.subheadline).foregroundColor(.white)
+                                    Text("View All").font(.subheadline).foregroundColor(Color(hex: "247FA6"))
+                                    Image(systemName: "arrow.right").font(.subheadline).foregroundColor(Color(hex: "247FA6"))
                                 }
                             }
                             .padding(20)
-                            .background(Color(red: 0.12, green: 0.12, blue: 0.13))
+                            .background(Color(hex: "1C1C1E"))
                             .cornerRadius(20)
                             .padding(.horizontal, 20)
                         }
                         
+                        // Blue End Trip Button
                         if connectivity.isDriving {
                             Button(action: {
                                 connectivity.sendDriveStatus(isStarting: false)
@@ -436,47 +439,45 @@ struct HomeView: View {
                                     .foregroundColor(.white)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 18)
-                                    .background(Color(hex: "D20A0A"))
+                                    .background(Color(hex: "247FA6"))
                                     .cornerRadius(30)
                             }
-                            .padding(.horizontal, 40)
+                            .padding(.horizontal, 20)
                             .padding(.top, 20)
                         }
-                        
                     }
                     .padding(.bottom, 40)
                 }
             }
             .navigationBarHidden(true)
-            .sheet(isPresented: $showProfileEdit) {
-                EditProfileView()
-            }
-            .onAppear {
-                sleepManager.fetchSleepData()
-            }
+            .sheet(isPresented: $showProfileEdit) { EditProfileView() }
+            .sheet(isPresented: $showInfoSheet) { InfoSheetView() }
+            .onAppear { sleepManager.fetchSleepData() }
             .onChange(of: connectivity.newlyCompletedTripData) { oldValue, newValue in
                 if let data = newValue {
-                    let newTrip = Trip(date: data.date, duration: data.duration, avgSpeed: data.speed, avgHR: data.hr, hadSleepWarning: data.warning)
+                    let newTrip = Trip(
+                        date: data.date,
+                        duration: data.duration,
+                        avgSpeed: data.speed,
+                        avgHR: data.hr,
+                        avgRiskScore: data.avgRiskScore,
+                        hadSleepWarning: data.warning
+                    )
                     modelContext.insert(newTrip)
                     connectivity.newlyCompletedTripData = nil
                 }
             }
         }
-        .onReceive(Timer.publish(every: 5, on: .main, in: .common).autoconnect()) { _ in
-            if connectivity.isDriving {
-                let cleanSpeed = locationManager.currentSpeed < 5 ? 0 : locationManager.currentSpeed
-                connectivity.addTelemetry(speed: cleanSpeed, hr: connectivity.currentHeartRate)
-            }
-        }
     }
 }
 
-// MARK: - Sleep Data Manager
+// MARK: - REAL Sleep Data Manager
 class SleepManager: ObservableObject {
-    @Published var sleepText: String = "Not Recorded"
-    @Published var statusText: String = "Unknown"
+    @Published var hasData: Bool = false
+    @Published var sleepHours: Int = 0
+    @Published var sleepMinutes: Int = 0
     @Published var statusColor: Color = .gray
-    @Published var badgeText: String = "NO DATA"
+    @Published var badgeText: String = ""
     
     private let healthStore = HKHealthStore()
     
@@ -486,7 +487,7 @@ class SleepManager: ObservableObject {
         
         let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
         let now = Date()
-        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: now)
+        let yesterday = Calendar.current.date(byAdding: .hour, value: -24, to: now)!
         let predicate = HKQuery.predicateForSamples(withStart: yesterday, end: now, options: .strictStartDate)
         
         let query = HKSampleQuery(sampleType: sleepType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: [sortDescriptor]) { _, samples, error in
@@ -503,28 +504,24 @@ class SleepManager: ObservableObject {
             let totalHours = totalSleepInterval / 3600.0
             
             DispatchQueue.main.async {
-                if totalHours == 0 {
-                    self.sleepText = "Not Recorded"
-                    self.statusText = "Unknown"
-                    self.statusColor = .gray
-                    self.badgeText = "NO DATA"
+                if totalHours <= 0 {
+                    self.hasData = false
+                    self.statusColor = Color.gray.opacity(0.3)
+                    self.badgeText = ""
                 } else {
-                    let h = Int(totalHours)
-                    let m = Int((totalHours - Double(h)) * 60)
-                    self.sleepText = "\(h)hr \(m)min"
+                    self.hasData = true
+                    self.sleepHours = Int(totalHours)
+                    self.sleepMinutes = Int((totalHours - Double(self.sleepHours)) * 60)
                     
-                    if totalHours >= 8 {
-                        self.statusText = "Well Rested"
-                        self.statusColor = Color(hex: "00D543")
+                    if totalHours >= 6 {
+                        self.statusColor = Color(hex: "00D543") // Green
                         self.badgeText = "SAFE"
-                    } else if totalHours >= 5 {
-                        self.statusText = "Moderate Risk"
-                        self.statusColor = Color(hex: "FEB504")
-                        self.badgeText = "MODERATE"
+                    } else if totalHours >= 4 {
+                        self.statusColor = Color(hex: "FEB504") // Yellow
+                        self.badgeText = "MODERATE RISK"
                     } else {
-                        self.statusText = "High Risk"
-                        self.statusColor = Color(hex: "D20A0A")
-                        self.badgeText = "HIGH"
+                        self.statusColor = Color(hex: "D20A0A") // Red
+                        self.badgeText = "HIGH RISK"
                     }
                 }
             }
@@ -533,16 +530,15 @@ class SleepManager: ObservableObject {
     }
 }
 
+// MARK: - Edit Profile
 struct EditProfileView: View {
     @Environment(\.presentationMode) var presentationMode
     @AppStorage("userName") var userName: String = ""
-    @AppStorage("userGender") var userGender: String = "Not Specified"
     
     var body: some View {
         NavigationView {
             ZStack {
-                Color(hex: "000000").edgesIgnoringSafeArea(.all)
-                
+                Color.black.edgesIgnoringSafeArea(.all)
                 VStack(alignment: .leading, spacing: 30) {
                     VStack(alignment: .leading, spacing: 10) {
                         Text("Name").font(.headline).foregroundColor(.white)
@@ -551,14 +547,6 @@ struct EditProfileView: View {
                             .background(Color(UIColor.systemGray6))
                             .cornerRadius(15)
                             .foregroundColor(.white)
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Gender").font(.headline).foregroundColor(.white)
-                        HStack(spacing: 15) {
-                            GenderButton(title: "Female", selected: $userGender)
-                            GenderButton(title: "Male", selected: $userGender)
-                        }
                     }
                     Spacer()
                 }
@@ -578,16 +566,18 @@ struct EditProfileView: View {
     }
 }
 
-// MARK: - Interactive Summary Screen
+// MARK: - Summary Screen
 struct SummaryView: View {
     @Environment(\.presentationMode) var presentationMode
+    @Query(sort: \Trip.date, order: .reverse) private var pastTrips: [Trip]
     
-    let days = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"]
-    @State private var selectedDay: String = "Fri"
+    let days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    @State private var selectedDay: String = ""
+    @State private var riskScoreOpacity: Double = 0.0
     
     var body: some View {
         ZStack {
-            Color(hex: "000000").edgesIgnoringSafeArea(.all)
+            Color.black.edgesIgnoringSafeArea(.all)
             
             ScrollView {
                 VStack(alignment: .leading, spacing: 25) {
@@ -596,7 +586,7 @@ struct SummaryView: View {
                         Button(action: { presentationMode.wrappedValue.dismiss() }) {
                             Image(systemName: "chevron.left").font(.title2).foregroundColor(.white)
                         }
-                        Text("Summary")
+                        Text("Weekly Summary")
                             .font(.system(size: 32, weight: .bold))
                             .foregroundColor(.white)
                             .padding(.leading, 10)
@@ -605,145 +595,306 @@ struct SummaryView: View {
                     .padding(.horizontal, 20)
                     .padding(.top, 10)
                     
-                    VStack(spacing: 20) {
-                        // 🚨 FIX: Reduced spacing, enforced single line, allowing scale down
-                        HStack(spacing: 8) {
+                    VStack(spacing: 25) {
+                        
+                        // Days Segment Switcher Bar
+                        HStack(spacing: 4) {
                             ForEach(days, id: \.self) { day in
                                 Text(day)
-                                    .font(.caption)
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.8)
+                                    .font(.system(size: 13, weight: selectedDay == day ? .semibold : .regular))
                                     .foregroundColor(selectedDay == day ? .white : .gray)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(selectedDay == day ? Color(hex: "D9D9D9").opacity(0.3) : Color.clear)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 8)
+                                    .background(selectedDay == day ? Color.white.opacity(0.15) : Color.clear)
                                     .cornerRadius(10)
                                     .onTapGesture {
-                                        withAnimation { selectedDay = day }
+                                        triggerFadeAnimation(for: day)
                                     }
                             }
                         }
-                        .padding(.top, 10)
+                        .padding(6)
+                        .background(Color(hex: "2C2C2E").opacity(0.6))
+                        .cornerRadius(14)
+                        .padding(.horizontal, 15)
+                        .padding(.top, 15)
                         
-                        HStack(alignment: .bottom, spacing: 18) {
-                            let heights: [CGFloat] = [50, 0, 60, 120, 90, 80, 40]
-                            ForEach(0..<7) { i in
-                                ChartBar(
-                                    height: heights[i],
-                                    color: selectedDay == days[i] ? Color(hex: "247FA6") : Color.gray.opacity(0.4)
-                                )
-                                .onTapGesture {
-                                    withAnimation { selectedDay = days[i] }
+                        // Chart Container
+                        ZStack(alignment: .top) {
+                            
+                            // Floating tooltip overlay text
+                            Text("Avg Risk Score = \(getDayAvgRisk(for: selectedDay))%")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(.gray)
+                                .offset(y: -25)
+                                .opacity(riskScoreOpacity)
+                                .zIndex(1)
+                            
+                            // The Bars Layout Loop
+                            HStack(alignment: .bottom, spacing: 0) {
+                                ForEach(days, id: \.self) { day in
+                                    VStack {
+                                        Spacer()
+                                        Capsule()
+                                            .fill(selectedDay == day ? Color(hex: "247FA6") : Color(hex: "3A3A3C"))
+                                            .frame(
+                                                width: getChartHeight(for: day) == 4 ? 6 : 10,
+                                                height: getChartHeight(for: day)
+                                            )
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        triggerFadeAnimation(for: day)
+                                    }
                                 }
                             }
+                            .frame(height: 140)
+                            .padding(.horizontal, 10)
                         }
-                        .frame(height: 150)
-                        .padding(.bottom, 20)
+                        .padding(.bottom, 15)
                     }
                     .frame(maxWidth: .infinity)
-                    .background(Color(red: 0.12, green: 0.12, blue: 0.13))
+                    .background(Color(hex: "1C1C1E"))
                     .cornerRadius(25)
                     .padding(.horizontal, 20)
                     
-                    Text("Trips on \(selectedDay)")
+                    Text("Trips")
                         .font(.title3).bold()
                         .foregroundColor(.white)
                         .padding(.horizontal, 20)
                     
+                    // Real Trips List for Selected Day
                     VStack(spacing: 15) {
-                        if selectedDay == "Sun" {
-                            Text("No driving recorded on Sunday.")
+                        let dailyTrips = getTrips(for: selectedDay)
+                        
+                        if dailyTrips.isEmpty {
+                            Text("No driving recorded on \(selectedDay).")
                                 .font(.subheadline)
                                 .foregroundColor(.gray)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(.horizontal, 20)
-                        } else if selectedDay == "Tue" {
-                            DailyTripRow(tripNum: "Trip 1", duration: "1hr 15m", highestStage: "Drowsy (Stage 2)", color: Color(hex: "FF8104"))
-                            DailyTripRow(tripNum: "Trip 2", duration: "45m", highestStage: "Fully Alert", color: Color(hex: "00D543"))
+                                .padding(.top, 10)
                         } else {
-                            DailyTripRow(tripNum: "Trip 1", duration: "30m", highestStage: "Fully Alert", color: Color(hex: "00D543"))
+                            ForEach(Array(dailyTrips.enumerated()), id: \.element.id) { index, trip in
+                                DailyTripRow(
+                                    tripNum: "Trip \(dailyTrips.count - index)",
+                                    duration: trip.duration,
+                                    avgHR: trip.avgHR,
+                                    avgSpeed: trip.avgSpeed,
+                                    avgRiskScore: trip.avgRiskScore
+                                )
+                            }
                         }
                     }
                     .padding(.horizontal, 20)
-                    
-                    Text("Driving Focus Breakdown")
-                        .font(.title3).bold()
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 20)
-                        .padding(.top, 10)
-                    
-                    VStack(spacing: 15) {
-                        AlertLevelRow(color: Color(hex: "00D543"), title: "Fully Alert", time: "8hr 10m", percentage: "80%")
-                        AlertLevelRow(color: Color(hex: "FEB504"), title: "Mild Fatigue", time: "1hr 5m", percentage: "12%")
-                        AlertLevelRow(color: Color(hex: "FF8104"), title: "Drowsy", time: "30m", percentage: "6%")
-                        AlertLevelRow(color: Color(hex: "D20A0A"), title: "Critical Risk", time: "15m", percentage: "2%")
-                    }
-                    .padding(.horizontal, 20)
-                    
                 }
                 .padding(.bottom, 40)
             }
         }
         .navigationBarHidden(true)
+        .onAppear {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "EEE"
+            selectedDay = formatter.string(from: Date())
+        }
+    }
+    
+    // MARK: - Logic Helpers
+    private func triggerFadeAnimation(for day: String) {
+        withAnimation { selectedDay = day }
+        withAnimation(.easeIn(duration: 0.2)) { riskScoreOpacity = 1.0 }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+            if selectedDay == day {
+                withAnimation(.easeOut(duration: 0.3)) { riskScoreOpacity = 0.0 }
+            }
+        }
+    }
+    
+    private func getTrips(for dayString: String) -> [Trip] {
+        let df = DateFormatter()
+        df.dateStyle = .short
+        df.timeStyle = .short
+        let dayFormatter = DateFormatter()
+        dayFormatter.dateFormat = "EEE"
+        
+        return pastTrips.filter { trip in
+            if let date = df.date(from: trip.date) {
+                return dayFormatter.string(from: date) == dayString
+            }
+            return false
+        }
+    }
+    
+    private func getDayAvgRisk(for dayString: String) -> Int {
+        let trips = getTrips(for: dayString)
+        if trips.isEmpty { return 0 }
+        let totalRisk = trips.reduce(0) { $0 + $1.avgRiskScore }
+        return totalRisk / trips.count
+    }
+    
+    private func getChartHeight(for dayString: String) -> CGFloat {
+        let trips = getTrips(for: dayString)
+        if trips.isEmpty { return 4 }
+        let avgRisk = getDayAvgRisk(for: dayString)
+        if avgRisk <= 0 { return 4 }
+        
+        return 4 + (CGFloat(avgRisk) / 100.0 * 130)
     }
 }
 
-// Components for Summary
-struct ChartBar: View {
-    let height: CGFloat
-    let color: Color
-    var body: some View {
-        RoundedRectangle(cornerRadius: 4)
-            .fill(color)
-            .frame(width: 8, height: max(height, 5))
-    }
-}
-
+// Trip Row
 struct DailyTripRow: View {
-    let tripNum: String; let duration: String; let highestStage: String; let color: Color
+    let tripNum: String
+    let duration: String
+    let avgHR: Int
+    let avgSpeed: Int
+    let avgRiskScore: Int
+    
+    // Determines the exact stage based on the true average risk score
+    var riskData: (title: String, color: Color) {
+        switch avgRiskScore {
+        case ...39: return ("Stable", Color(hex: "00D543")) // 🚨 Handles fallback baseline parameters safely
+        case 40...69: return ("Losing Focus", Color(hex: "FEB504"))
+        case 70...89: return ("Unstable", Color(hex: "FF8104"))
+        default: return ("High Risk", Color(hex: "D20A0A"))
+        }
+    }
+    
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
+        VStack(spacing: 12) {
+            HStack {
                 Text(tripNum).font(.headline).foregroundColor(.white)
+                Spacer()
                 Text(duration).font(.subheadline).foregroundColor(.gray)
             }
-            Spacer()
-            VStack(alignment: .trailing, spacing: 4) {
-                // 🚨 FIX: Changed to "Max Risk Reached"
-                Text("Max Risk Reached").font(.caption).foregroundColor(.gray)
-                HStack(spacing: 5) {
-                    Circle().fill(color).frame(width: 8, height: 8)
-                    Text(highestStage).font(.subheadline).bold().foregroundColor(.white)
+            
+            HStack(spacing: 20) {
+                HStack(spacing: 4) {
+                    Image(systemName: "heart.fill").foregroundColor(Color(hex: "D20A0A")).font(.caption)
+                    Text("\(avgHR) bpm avg").font(.caption).foregroundColor(.gray)
                 }
+                HStack(spacing: 4) {
+                    Image(systemName: "speedometer").foregroundColor(Color(hex: "247FA6")).font(.caption)
+                    Text("\(avgSpeed) km/h avg").font(.caption).foregroundColor(.gray)
+                }
+                Spacer()
+            }
+            
+            HStack {
+                // 🚨 FIX: Removed "Average State:" text layout completely. Just the pill container now.
+                Spacer()
+                
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(riskData.color)
+                        .frame(width: 8, height: 8)
+                        .overlay(Circle().stroke(Color.black.opacity(0.4), lineWidth: 1.5))
+                    Text(riskData.title).font(.caption).bold().foregroundColor(.white)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(Color(hex: "2C2C2E"))
+                .clipShape(Capsule())
             }
         }
         .padding(15)
-        .background(Color(red: 0.12, green: 0.12, blue: 0.13))
+        .background(Color(hex: "1C1C1E"))
         .cornerRadius(15)
     }
 }
 
-struct AlertLevelRow: View {
-    let color: Color; let title: String; let time: String; let percentage: String
+// MARK: - How It Works (Info Sheet)
+struct InfoSheetView: View {
+    @Environment(\.presentationMode) var presentationMode
+    
     var body: some View {
-        HStack {
-            Circle().fill(color).frame(width: 12, height: 12)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.headline).foregroundColor(.white)
-                Text(time).font(.caption).foregroundColor(.gray)
+        NavigationView {
+            ZStack {
+                Color.black.edgesIgnoringSafeArea(.all)
+                
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        Text("How Copirrot Protects You")
+                            .font(.title2).bold()
+                            .foregroundColor(.white)
+                            .padding(.bottom, 10)
+                        
+                        StageInfoRow(
+                            color: Color(hex: "00D543"),
+                            title: "Stable",
+                            score: "Score: 0 - 39",
+                            desc: "System is quietly monitoring your vitals in the background. No alerts."
+                        )
+                        
+                        StageInfoRow(
+                            color: Color(hex: "FEB504"),
+                            title: "Losing Focus",
+                            score: "Score: 40 - 69",
+                            desc: "Apple Watch vibrates gently for 15 seconds to check your responsiveness and encourage movement."
+                        )
+                        
+                        StageInfoRow(
+                            color: Color(hex: "FF8104"),
+                            title: "Unstable",
+                            score: "Score: 70 - 89",
+                            desc: "Apple Watch vibrates for 20 seconds. If you remain still, your iPhone's audio system will wake up and speak a warning to fix your posture."
+                        )
+                        
+                        StageInfoRow(
+                            color: Color(hex: "D20A0A"),
+                            title: "High Risk",
+                            score: "Score: 90 - 100",
+                            desc: "Continuous loop: 25 seconds of heavy vibration followed by an urgent voice command to pull over. This locks the system and can ONLY be dismissed by vigorously shaking your wrist, dropping your risk score by 50 points."
+                        )
+                    }
+                    .padding(25)
+                }
             }
-            .padding(.leading, 5)
-            Spacer()
-            Text(percentage)
-                .font(.subheadline).bold()
-                .foregroundColor(.white)
-                .padding(.horizontal, 15)
-                .padding(.vertical, 8)
-                .background(Color(hex: "D9D9D9").opacity(0.3))
-                .cornerRadius(15)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") { presentationMode.wrappedValue.dismiss() }
+                        .foregroundColor(Color(hex: "247FA6"))
+                }
+            }
+        }
+        .preferredColorScheme(.dark)
+    }
+}
+
+struct StageInfoRow: View {
+    let color: Color
+    let title: String
+    let score: String
+    let desc: String
+    
+    var body: some View {
+        HStack(alignment: .top, spacing: 15) {
+            Circle()
+                .fill(color)
+                .frame(width: 12, height: 12)
+                .overlay(Circle().stroke(Color.black.opacity(0.4), lineWidth: 1.5))
+                .padding(.top, 4)
+            
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text(title).font(.headline).bold().foregroundColor(.white)
+                    Spacer()
+                    Text(score).font(.caption).bold().foregroundColor(color)
+                        .padding(.horizontal, 8).padding(.vertical, 4)
+                        .background(color.opacity(0.15))
+                        .clipShape(Capsule())
+                }
+                
+                Text(desc)
+                    .font(.subheadline)
+                    .foregroundColor(.gray)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .padding(15)
-        .background(Color(red: 0.12, green: 0.12, blue: 0.13))
+        .background(Color(hex: "1C1C1E"))
         .cornerRadius(15)
     }
 }
