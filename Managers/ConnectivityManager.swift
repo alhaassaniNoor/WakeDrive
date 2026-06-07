@@ -19,6 +19,7 @@ class ConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
     @Published var currentHeartRate: Double = 0
     @Published var isStill: Bool = false
     @Published var triggerWatchReset = false
+    @Published var isSessionActivated: Bool = false
     
     #if os(iOS)
     @Published var isWatchAppInstalled: Bool = false
@@ -33,7 +34,6 @@ class ConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
     
     override private init() {
         super.init()
-        
         if WCSession.isSupported() {
             WCSession.default.delegate = self
             WCSession.default.activate()
@@ -41,7 +41,12 @@ class ConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
     }
     
     func sendDriveStatus(isStarting: Bool) {
-        let msg: [String: Any] = ["isDriving": isStarting]
+        // 🚨 THE FIX: Stamp the exact second this message was created
+        let msg: [String: Any] = [
+            "isDriving": isStarting,
+            "timestamp": Date().timeIntervalSince1970
+        ]
+        
         DispatchQueue.main.async {
             if isStarting {
                 self.isDriving = true
@@ -105,12 +110,12 @@ class ConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
         if hr > 0 { hrReadings.append(hr) }
     }
     
-    // Dedicated method for LocationManager to push background speed
     func addSpeedReading(_ speed: Int) {
         if speed > 0 { speedReadings.append(speed) }
     }
     
     private func saveTrip() {
+        // 🚨 BAND-AID REMOVED: Short test trips will perfectly save again.
         guard let start = tripStartDate else { return }
         let durationMinutes = max(1, Int(Date().timeIntervalSince(start) / 60))
         
@@ -143,6 +148,17 @@ class ConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
     private func handleIncoming(_ dict: [String: Any]) {
         DispatchQueue.main.async {
             if let drivingStatus = dict["isDriving"] as? Bool {
+                
+                // 🚨 THE FIX: Ignore stale messages from the queue
+                if let timestamp = dict["timestamp"] as? TimeInterval {
+                    let messageAge = Date().timeIntervalSince1970 - timestamp
+                    // If the "Start" message is more than 5 minutes old (300 seconds), it's a ghost. Burn it.
+                    if messageAge > 300 && drivingStatus == true {
+                        print("Burned a ghost trip message from \(messageAge) seconds ago.")
+                        return
+                    }
+                }
+                
                 #if os(iOS)
                 if self.isDriving == true && drivingStatus == false {
                     self.saveTrip()
@@ -162,9 +178,7 @@ class ConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
             if let hr = dict["heartRate"] as? Double {
                 self.currentHeartRate = hr
                 #if os(iOS)
-                if self.isDriving && hr > 0 {
-                    self.hrReadings.append(hr)
-                }
+                if self.isDriving && hr > 0 { self.hrReadings.append(hr) }
                 #endif
             }
             
@@ -173,9 +187,7 @@ class ConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
             if let score = dict["sleepScore"] as? Int {
                 self.currentSleepScore = score
                 #if os(iOS)
-                if score >= 0 {
-                    self.riskReadings.append(score)
-                }
+                if score >= 0 { self.riskReadings.append(score) }
                 if score >= 70 { self.hadWarning = true }
                 #endif
             }
@@ -197,9 +209,16 @@ class ConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
     }
 
     func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
-        #if os(iOS)
         DispatchQueue.main.async {
+            self.isSessionActivated = (activationState == .activated)
+            #if os(iOS)
             self.isWatchAppInstalled = session.isWatchAppInstalled
+            #endif
+        }
+        
+        #if os(watchOS)
+        if activationState == .activated {
+            self.sendDriveStatus(isStarting: self.isDriving)
         }
         #endif
     }

@@ -98,5 +98,51 @@
             landmarkType = "24">
          </BreakpointContent>
       </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "080DCCC3-A74F-4636-B4CE-38550BFF842C"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Managers/LocationManager.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "8"
+            endingLineNumber = "8"
+            landmarkName = "LocationManager"
+            landmarkType = "3">
+            <Locations>
+               <Location
+                  uuid = "080DCCC3-A74F-4636-B4CE-38550BFF842C - 3b719d3dfaf3edaa"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "DriveAppTest.LocationManager.__allocating_init() -&gt; DriveAppTest.LocationManager"
+                  moduleName = "DriveAppTest.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/juri/Library/Mobile%20Documents/com~apple~CloudDocs/DriveAppTest/Managers/LocationManager.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "0"
+                  endingLineNumber = "0">
+               </Location>
+               <Location
+                  uuid = "080DCCC3-A74F-4636-B4CE-38550BFF842C - 81ea5b432a24a870"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "DriveAppTest.LocationManager.init() -&gt; DriveAppTest.LocationManager"
+                  moduleName = "DriveAppTest.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/juri/Library/Mobile%20Documents/com~apple~CloudDocs/DriveAppTest/Managers/LocationManager.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "6"
+                  endingLineNumber = "6">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
    </Breakpoints>
 </Bucket>
