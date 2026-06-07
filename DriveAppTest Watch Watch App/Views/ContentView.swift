@@ -27,7 +27,6 @@ struct ContentView: View {
                 TabView {
                     AlertDialScreen(viewModel: viewModel)
                     WatchLiveDashboard(viewModel: viewModel)
-                    // 🚨 NEW: The third swipe screen with the pure text button
                     WatchControlsScreen(viewModel: viewModel)
                 }
                 .tabViewStyle(PageTabViewStyle(indexDisplayMode: .automatic))
@@ -182,50 +181,64 @@ struct WatchLiveDashboard: View {
         ZStack {
             Color.black.ignoresSafeArea()
             
-            VStack(spacing: 15) {
-                ZStack {
-                    Circle()
-                        .fill(stageColor)
-                        .frame(width: 90, height: 90)
+            HStack(spacing: 0) {
+                // Left Side: Metrics Stack
+                VStack(alignment: .leading, spacing: 14) {
                     
-                    if viewModel.currentScore == -1 {
-                        Text("--%")
-                            .font(.title).bold()
-                            .foregroundColor(.white)
-                    } else {
-                        Text("\(viewModel.currentScore)%")
-                            .font(.title).bold()
-                            .foregroundColor(.white)
-                    }
-                }
-                .padding(.top, 10)
-                
-                // Telemetry Stats
-                HStack(spacing: 25) {
-                    VStack(spacing: 2) {
-                        HStack(alignment: .lastTextBaseline, spacing: 1) {
-                            Text("\(Int(viewModel.currentBPM))").font(.title3).bold().foregroundColor(.white)
-                            Text("bpm").font(.system(size: 10)).foregroundColor(.gray)
+                    // Heart Rate
+                    VStack(alignment: .leading, spacing: -2) {
+                        Text("heart rate")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(Color(hex: "D20A0A"))
+                        HStack(alignment: .lastTextBaseline, spacing: 2) {
+                            Text("\(Int(viewModel.currentBPM))")
+                                .font(.system(size: 22, weight: .bold))
+                                .foregroundColor(.white)
+                            Text("bpm")
+                                .font(.system(size: 12, weight: .regular))
+                                .foregroundColor(.gray)
                         }
-                        Text("Heart Rate").font(.system(size: 9, weight: .bold)).foregroundColor(Color(hex: "D20A0A"))
                     }
                     
-                    VStack(spacing: 2) {
-                        HStack(alignment: .lastTextBaseline, spacing: 1) {
-                            Text("0").font(.title3).bold().foregroundColor(.white)
-                            Text("km").font(.system(size: 10)).foregroundColor(.gray)
+                    // Speed
+                    VStack(alignment: .leading, spacing: -2) {
+                        Text("speed")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(Color(hex: "247FA6"))
+                        HStack(alignment: .lastTextBaseline, spacing: 2) {
+                            Text("0")
+                                .font(.system(size: 22, weight: .bold))
+                                .foregroundColor(.white)
+                            Text("km")
+                                .font(.system(size: 12, weight: .regular))
+                                .foregroundColor(.gray)
                         }
-                        Text("Speed").font(.system(size: 9, weight: .bold)).foregroundColor(Color(hex: "247FA6"))
+                    }
+                    
+                    // Wrist Activity
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("wrist activity")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(Color(hex: "00D543"))
+                        Text(viewModel.isStill ? "Still" : "Active")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundColor(.white)
                     }
                 }
-                
-                // Wrist Activity
-                VStack(spacing: 2) {
-                    Text(viewModel.isStill ? "Still" : "Active").font(.system(size: 14)).foregroundColor(.white)
-                    Text("Wrist Activity").font(.system(size: 10, weight: .bold)).foregroundColor(Color(hex: "00D543"))
-                }
+                .padding(.leading, 10)
                 
                 Spacer()
+                
+                // Right Side: Risk Circle
+                Circle()
+                    .fill(stageColor)
+                    .frame(width: 85, height: 85)
+                    .overlay(
+                        Text(viewModel.currentScore == -1 ? "--%" : "\(viewModel.currentScore)%")
+                            .font(.system(size: 26, weight: .bold))
+                            .foregroundColor(.white)
+                    )
+                    .padding(.trailing, 10)
             }
         }
     }
