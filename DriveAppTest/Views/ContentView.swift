@@ -241,16 +241,22 @@ struct WatchSetupView: View {
             Color.black.edgesIgnoringSafeArea(.all)
             VStack(spacing: 40) {
                 Spacer()
-                Image(systemName: "applewatch.and.arrow.forward")
+                
+                // 🚨 UPDATED: Smaller Apple Watch icon
+                Image(systemName: "applewatch")
                     .font(.system(size: 100))
                     .foregroundColor(Color(hex: "FEB504"))
+                
                 Text("Connect Apple Watch")
                     .font(.title2).bold()
                     .foregroundColor(.white)
+                    .padding(.top, 10)
+                
                 Text("Copirrot needs the Apple Watch app to monitor heart rate and arm movement.")
                     .multilineTextAlignment(.center)
                     .foregroundColor(.gray)
                     .padding(.horizontal, 40)
+                
                 VStack(alignment: .center, spacing: 25) {
                     Text("1) Close this app and open the 'Watch' app.")
                     Text("2) Scroll to the bottom and tap 'Install'.")
@@ -259,7 +265,9 @@ struct WatchSetupView: View {
                 .foregroundColor(.white)
                 .padding(.horizontal, 30)
                 .padding(.top, 20)
+                
                 Spacer()
+                
                 HStack {
                     ProgressView().progressViewStyle(CircularProgressViewStyle(tint: .gray)).padding(.trailing, 5)
                     Text("Waiting for connection...")
@@ -271,7 +279,6 @@ struct WatchSetupView: View {
         }
     }
 }
-
 // MARK: - Main Home Dashboard
 struct HomeView: View {
     @AppStorage("userName") var userName: String = ""
@@ -792,49 +799,50 @@ struct DailyTripRow: View {
     }
     
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
+            // Row 1: Title and Duration
             HStack {
-                Text(tripNum).font(.headline).foregroundColor(.white)
+                Text(tripNum)
+                    .font(.headline)
+                    .foregroundColor(.white)
                 Spacer()
-                Text(duration).font(.subheadline).foregroundColor(.gray)
+                Text(duration)
+                    .font(.subheadline)
+                    .foregroundColor(.gray)
             }
             
-            HStack(spacing: 20) {
-                // 🚨 THE FIX: Failsafe logic for missing HR data
+            // Row 2: Metrics and Status Badge
+            HStack(spacing: 15) {
+                // Heart Rate
                 HStack(spacing: 4) {
-                    if avgHR == 0 {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundColor(Color(hex: "FEB504"))
-                            .font(.caption)
-                        Text("HR Data Missing")
-                            .font(.caption)
-                            .foregroundColor(Color(hex: "FEB504"))
-                    } else {
-                        Image(systemName: "heart.fill")
-                            .foregroundColor(Color(hex: "D20A0A"))
-                            .font(.caption)
-                        Text("\(avgHR) bpm avg")
-                            .font(.caption)
-                            .foregroundColor(.gray)
-                    }
+                    Image(systemName: "heart.fill")
+                        .foregroundColor(.red)
+                        .font(.caption)
+                    Text("\(avgHR) bpm")
+                        .font(.caption)
+                        .foregroundColor(.gray)
                 }
                 
+                // Speed
                 HStack(spacing: 4) {
-                    Image(systemName: "speedometer").foregroundColor(Color(hex: "247FA6")).font(.caption)
-                    Text("\(avgSpeed) km/h avg").font(.caption).foregroundColor(.gray)
+                    Image(systemName: "speedometer")
+                        .foregroundColor(Color(hex: "247FA6"))
+                        .font(.caption)
+                    Text("\(avgSpeed) Km/h")
+                        .font(.caption)
+                        .foregroundColor(.gray)
                 }
-                Spacer()
-            }
-            
-            HStack {
+                
                 Spacer()
                 
+                // Status Badge
                 HStack(spacing: 6) {
                     Circle()
                         .fill(riskData.color)
                         .frame(width: 8, height: 8)
-                        .overlay(Circle().stroke(Color.black.opacity(0.4), lineWidth: 1.5))
-                    Text(riskData.title).font(.caption).bold().foregroundColor(.white)
+                    Text(riskData.title)
+                        .font(.caption).bold()
+                        .foregroundColor(.white)
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
@@ -847,7 +855,6 @@ struct DailyTripRow: View {
         .cornerRadius(15)
     }
 }
-
 // MARK: - How It Works (Info Sheet)
 struct InfoSheetView: View {
     @Environment(\.presentationMode) var presentationMode
