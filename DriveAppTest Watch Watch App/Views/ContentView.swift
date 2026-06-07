@@ -27,6 +27,8 @@ struct ContentView: View {
                 TabView {
                     AlertDialScreen(viewModel: viewModel)
                     WatchLiveDashboard(viewModel: viewModel)
+                    // 🚨 NEW: The third swipe screen with the pure text button
+                    WatchControlsScreen(viewModel: viewModel)
                 }
                 .tabViewStyle(PageTabViewStyle(indexDisplayMode: .automatic))
             } else {
@@ -64,7 +66,6 @@ struct StartScreen: View {
             }
             .frame(width: 75, height: 75)
             .buttonStyle(PlainButtonStyle())
-            // 🚨 NUDGED UP AGAIN: Changed y from 0 to -10
             .offset(x: -38, y: -10)
         }
     }
@@ -225,6 +226,32 @@ struct WatchLiveDashboard: View {
                 }
                 
                 Spacer()
+            }
+        }
+    }
+}
+
+// MARK: - 4. NEW: Watch Controls Screen
+struct WatchControlsScreen: View {
+    @ObservedObject var viewModel: WatchDriveViewModel
+    
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+            
+            VStack {
+                Button(action: {
+                    viewModel.endTripFromWatch()
+                }) {
+                    Text("End Drive")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity, maxHeight: 48)
+                        .background(Color(hex: "247FA6"))
+                        .cornerRadius(24)
+                }
+                .buttonStyle(PlainButtonStyle())
+                .padding(.horizontal, 20)
             }
         }
     }

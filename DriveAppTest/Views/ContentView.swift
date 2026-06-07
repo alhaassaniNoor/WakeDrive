@@ -530,42 +530,73 @@ class SleepManager: ObservableObject {
     }
 }
 
-// MARK: - Edit Profile
+// MARK: - Edit Profile View
 struct EditProfileView: View {
     @Environment(\.presentationMode) var presentationMode
     @AppStorage("userName") var userName: String = ""
+    // 🚨 Fixed: Ensuring the default color is your signature blue
+    @AppStorage("userColor") var userColorHex: String = "247FA6"
+    
+    @State private var tempName: String = ""
+    @State private var hasChanges: Bool = false
     
     var body: some View {
         NavigationView {
             ZStack {
                 Color.black.edgesIgnoringSafeArea(.all)
-                VStack(alignment: .leading, spacing: 30) {
+                
+                VStack(spacing: 40) {
+                    // Larger Profile Circle in Blue
+                    Circle()
+                        .fill(Color(hex: "247FA6"))
+                        .frame(width: 140, height: 140)
+                        .overlay(
+                            Text(String(tempName.prefix(1).uppercased()))
+                                .font(.system(size: 60, weight: .bold))
+                                .foregroundColor(.white)
+                        )
+                        .padding(.top, 40)
+                    
+                    // Name Input
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("Name").font(.headline).foregroundColor(.white)
-                        TextField("Enter your name", text: $userName)
+                        Text("Display Name")
+                            .font(.headline)
+                            .foregroundColor(.gray)
+                            .padding(.leading, 5)
+                        
+                        TextField("Enter your name", text: $tempName)
                             .padding()
                             .background(Color(UIColor.systemGray6))
                             .cornerRadius(15)
                             .foregroundColor(.white)
+                            .onChange(of: tempName) { _, newValue in
+                                hasChanges = (newValue != userName)
+                            }
                     }
+                    .padding(.horizontal, 30)
+                    
                     Spacer()
                 }
-                .padding(30)
-                .padding(.top, 20)
             }
             .navigationTitle("Edit Profile")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") { presentationMode.wrappedValue.dismiss() }
-                        .foregroundColor(Color(hex: "247FA6"))
+                    Button(hasChanges ? "Save" : "Done") {
+                        userName = tempName
+                        presentationMode.wrappedValue.dismiss()
+                    }
+                    .foregroundColor(Color(hex: "247FA6"))
+                    .bold()
                 }
+            }
+            .onAppear {
+                tempName = userName
             }
         }
         .preferredColorScheme(.dark)
     }
 }
-
 // MARK: - Summary Screen
 struct SummaryView: View {
     @Environment(\.presentationMode) var presentationMode
