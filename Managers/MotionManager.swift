@@ -191,7 +191,13 @@ class MotionManager: ObservableObject {
         let query = HKSampleQuery(sampleType: heartRateType, predicate: nil, limit: 1, sortDescriptors: [sortDescriptor]) { [weak self] _, results, _ in
             guard let sample = results?.first as? HKQuantitySample else { return }
             let bpm = sample.quantity.doubleValue(for: HKUnit.count().unitDivided(by: HKUnit.minute()))
-            DispatchQueue.main.async { self?.currentBPM = bpm }
+            
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                self.currentBPM = bpm
+                // 🚨 THE FIX: Push the data to the phone immediately every time we get a new reading
+                ConnectivityManager.shared.sendTelemetry(score: self.motionDangerScore, hr: bpm, still: self.isStill)
+            }
         }
         healthStore.execute(query)
     }

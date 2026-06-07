@@ -6,7 +6,7 @@ import UserNotifications
 
 class PermissionsViewModel: NSObject, ObservableObject, CLLocationManagerDelegate {
     @Published var allPermissionsGranted = false
-    @Published var isDenied = false // 🚨 Tracks if the user pressed "Don't Allow"
+    @Published var isDenied = false
     
     private let locationManager = CLLocationManager()
     private let healthStore = HKHealthStore()
@@ -14,6 +14,19 @@ class PermissionsViewModel: NSObject, ObservableObject, CLLocationManagerDelegat
     override init() {
         super.init()
         locationManager.delegate = self
+        checkLocationStatus()
+        
+        // 🚨 THE FIX: This listens for when the app comes back from the iOS Settings app
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(checkLocationStatus),
+            name: UIApplication.willEnterForegroundNotification,
+            object: nil
+        )
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
     
     func requestAllPermissions() {
@@ -26,9 +39,14 @@ class PermissionsViewModel: NSObject, ObservableObject, CLLocationManagerDelegat
         locationManager.requestAlwaysAuthorization()
     }
     
-    // 🚨 Listens for the user's choice. If denied, triggers the hard-stop screen.
+    // Fires when user makes a choice while the prompt is on screen
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        let status = manager.authorizationStatus
+        checkLocationStatus()
+    }
+    
+    // 🚨 Actively evaluates the true status to break the freeze loop
+    @objc private func checkLocationStatus() {
+        let status = locationManager.authorizationStatus
         DispatchQueue.main.async {
             if status == .denied || status == .restricted {
                 self.isDenied = true
@@ -41,6 +59,7 @@ class PermissionsViewModel: NSObject, ObservableObject, CLLocationManagerDelegat
     private func requestHealthKit() {
         guard HKHealthStore.isHealthDataAvailable() else { return }
         
+        // Requesting HR, HRV (Required) and Sleep (Optional)
         let heartRateType = HKQuantityType.quantityType(forIdentifier: .heartRate)!
         let hrvType = HKQuantityType.quantityType(forIdentifier: .heartRateVariabilitySDNN)!
         let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis)!

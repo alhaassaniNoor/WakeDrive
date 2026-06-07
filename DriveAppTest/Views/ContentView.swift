@@ -743,7 +743,7 @@ struct SummaryView: View {
     }
 }
 
-// Trip Row
+// MARK: - Trip Row
 struct DailyTripRow: View {
     let tripNum: String
     let duration: String
@@ -751,10 +751,9 @@ struct DailyTripRow: View {
     let avgSpeed: Int
     let avgRiskScore: Int
     
-    // Determines the exact stage based on the true average risk score
     var riskData: (title: String, color: Color) {
         switch avgRiskScore {
-        case ...39: return ("Stable", Color(hex: "00D543")) // 🚨 Handles fallback baseline parameters safely
+        case ...39: return ("Stable", Color(hex: "00D543"))
         case 40...69: return ("Losing Focus", Color(hex: "FEB504"))
         case 70...89: return ("Unstable", Color(hex: "FF8104"))
         default: return ("High Risk", Color(hex: "D20A0A"))
@@ -770,10 +769,25 @@ struct DailyTripRow: View {
             }
             
             HStack(spacing: 20) {
+                // 🚨 THE FIX: Failsafe logic for missing HR data
                 HStack(spacing: 4) {
-                    Image(systemName: "heart.fill").foregroundColor(Color(hex: "D20A0A")).font(.caption)
-                    Text("\(avgHR) bpm avg").font(.caption).foregroundColor(.gray)
+                    if avgHR == 0 {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(Color(hex: "FEB504"))
+                            .font(.caption)
+                        Text("HR Data Missing")
+                            .font(.caption)
+                            .foregroundColor(Color(hex: "FEB504"))
+                    } else {
+                        Image(systemName: "heart.fill")
+                            .foregroundColor(Color(hex: "D20A0A"))
+                            .font(.caption)
+                        Text("\(avgHR) bpm avg")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
                 }
+                
                 HStack(spacing: 4) {
                     Image(systemName: "speedometer").foregroundColor(Color(hex: "247FA6")).font(.caption)
                     Text("\(avgSpeed) km/h avg").font(.caption).foregroundColor(.gray)
@@ -782,7 +796,6 @@ struct DailyTripRow: View {
             }
             
             HStack {
-                // 🚨 FIX: Removed "Average State:" text layout completely. Just the pill container now.
                 Spacer()
                 
                 HStack(spacing: 6) {

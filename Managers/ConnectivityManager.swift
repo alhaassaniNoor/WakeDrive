@@ -105,6 +105,11 @@ class ConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
         if hr > 0 { hrReadings.append(hr) }
     }
     
+    // Dedicated method for LocationManager to push background speed
+    func addSpeedReading(_ speed: Int) {
+        if speed > 0 { speedReadings.append(speed) }
+    }
+    
     private func saveTrip() {
         guard let start = tripStartDate else { return }
         let durationMinutes = max(1, Int(Date().timeIntervalSince(start) / 60))
@@ -153,12 +158,21 @@ class ConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
                 #endif
                 self.isDriving = drivingStatus
             }
-            if let hr = dict["heartRate"] as? Double { self.currentHeartRate = hr }
+            
+            if let hr = dict["heartRate"] as? Double {
+                self.currentHeartRate = hr
+                #if os(iOS)
+                if self.isDriving && hr > 0 {
+                    self.hrReadings.append(hr)
+                }
+                #endif
+            }
+            
             if let still = dict["isStill"] as? Bool { self.isStill = still }
+            
             if let score = dict["sleepScore"] as? Int {
                 self.currentSleepScore = score
                 #if os(iOS)
-                // 🚨 FIX: Ignore negative calibration scores (-1)
                 if score >= 0 {
                     self.riskReadings.append(score)
                 }
