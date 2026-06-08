@@ -65,7 +65,7 @@ struct StartScreen: View {
             }
             .frame(width: 75, height: 75)
             .buttonStyle(PlainButtonStyle())
-            .offset(x: -38, y: -10)
+            .offset(x: -41, y: -10)
         }
     }
 }
