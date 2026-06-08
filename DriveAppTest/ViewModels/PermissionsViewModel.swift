@@ -9,14 +9,14 @@ class PermissionsViewModel: NSObject, ObservableObject, CLLocationManagerDelegat
     @Published var isDenied = false
     
     private let locationManager = CLLocationManager()
-    private let healthStore = HKHealthStore()
+    // Connect to the HealthManager we just created
+    private let healthManager = HealthManager()
     
     override init() {
         super.init()
         locationManager.delegate = self
         checkLocationStatus()
         
-        // 🚨 THE FIX: This listens for when the app comes back from the iOS Settings app
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(checkLocationStatus),
@@ -25,59 +25,35 @@ class PermissionsViewModel: NSObject, ObservableObject, CLLocationManagerDelegat
         )
     }
     
-    deinit {
-        NotificationCenter.default.removeObserver(self)
-    }
+    deinit { NotificationCenter.default.removeObserver(self) }
     
     func requestAllPermissions() {
-        requestLocation()
-        requestHealthKit()
-        requestNotifications()
-    }
-    
-    private func requestLocation() {
+        // 1. Ask for Location
         locationManager.requestAlwaysAuthorization()
+        
+        // 2. Ask for Health using the unified HealthManager (Staggered to prevent black screen)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            self.healthManager.requestPermissions { success in
+                print("HealthKit Authorization Success: \(success)")
+            }
+        }
+        
+        // 3. Ask for Notifications
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
+                if granted { print("Notifications allowed") }
+            }
+        }
     }
     
-    // Fires when user makes a choice while the prompt is on screen
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         checkLocationStatus()
     }
     
-    // 🚨 Actively evaluates the true status to break the freeze loop
     @objc private func checkLocationStatus() {
         let status = locationManager.authorizationStatus
         DispatchQueue.main.async {
-            if status == .denied || status == .restricted {
-                self.isDenied = true
-            } else if status == .authorizedAlways || status == .authorizedWhenInUse {
-                self.isDenied = false
-            }
-        }
-    }
-    
-    private func requestHealthKit() {
-        guard HKHealthStore.isHealthDataAvailable() else { return }
-        
-        // Requesting HR, HRV (Required) and Sleep (Optional)
-        let heartRateType = HKQuantityType.quantityType(forIdentifier: .heartRate)!
-        let hrvType = HKQuantityType.quantityType(forIdentifier: .heartRateVariabilitySDNN)!
-        let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis)!
-        
-        let typesToRead: Set = [heartRateType, hrvType, sleepType]
-        
-        healthStore.requestAuthorization(toShare: nil, read: typesToRead) { success, error in
-            if let error = error {
-                print("HealthKit Error: \(error.localizedDescription)")
-            }
-        }
-    }
-    
-    private func requestNotifications() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
-            if granted {
-                print("Notifications allowed")
-            }
+            self.isDenied = (status == .denied || status == .restricted)
         }
     }
 }
