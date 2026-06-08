@@ -14,8 +14,8 @@
             filePath = "DriveAppTest/Views/ContentView.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "784"
-            endingLineNumber = "784"
+            startingLineNumber = "793"
+            endingLineNumber = "793"
             landmarkName = "DailyTripRow"
             landmarkType = "14">
          </BreakpointContent>

@@ -750,37 +750,46 @@ struct SummaryView: View {
     }
     
     private func getTrips(for dayString: String) -> [Trip] {
-        let df = DateFormatter()
-        df.dateStyle = .short
-        df.timeStyle = .short
-        let dayFormatter = DateFormatter()
-        dayFormatter.dateFormat = "EEE"
-        
-        return pastTrips.filter { trip in
-            if let date = df.date(from: trip.date) {
-                return dayFormatter.string(from: date) == dayString
+            let df = DateFormatter()
+            df.dateStyle = .short
+            df.timeStyle = .short
+            let dayFormatter = DateFormatter()
+            dayFormatter.dateFormat = "EEE"
+            
+            // Filter for the selected day
+            let filteredTrips = pastTrips.filter { trip in
+                if let date = df.date(from: trip.date) {
+                    return dayFormatter.string(from: date) == dayString
+                }
+                return false
             }
-            return false
+            
+            // Sort chronologically so labels and order are accurate
+            return filteredTrips.sorted { trip1, trip2 in
+                guard let date1 = df.date(from: trip1.date),
+                      let date2 = df.date(from: trip2.date) else {
+                    return false
+                }
+                return date1 > date2
+            }
+        }
+        
+        private func getDayAvgRisk(for dayString: String) -> Int {
+            let trips = getTrips(for: dayString)
+            if trips.isEmpty { return 0 }
+            let totalRisk = trips.reduce(0) { $0 + $1.avgRiskScore }
+            return totalRisk / trips.count
+        }
+        
+        private func getChartHeight(for dayString: String) -> CGFloat {
+            let trips = getTrips(for: dayString)
+            if trips.isEmpty { return 4 }
+            let avgRisk = getDayAvgRisk(for: dayString)
+            if avgRisk <= 0 { return 4 }
+            
+            return 4 + (CGFloat(avgRisk) / 100.0 * 130)
         }
     }
-    
-    private func getDayAvgRisk(for dayString: String) -> Int {
-        let trips = getTrips(for: dayString)
-        if trips.isEmpty { return 0 }
-        let totalRisk = trips.reduce(0) { $0 + $1.avgRiskScore }
-        return totalRisk / trips.count
-    }
-    
-    private func getChartHeight(for dayString: String) -> CGFloat {
-        let trips = getTrips(for: dayString)
-        if trips.isEmpty { return 4 }
-        let avgRisk = getDayAvgRisk(for: dayString)
-        if avgRisk <= 0 { return 4 }
-        
-        return 4 + (CGFloat(avgRisk) / 100.0 * 130)
-    }
-}
-
 // MARK: - Trip Row
 struct DailyTripRow: View {
     let tripNum: String
