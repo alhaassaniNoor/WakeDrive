@@ -1,6 +1,6 @@
 import Foundation
 import HealthKit
-import Combine 
+import Combine
 
 class HealthManager: ObservableObject {
     let healthStore = HKHealthStore()
