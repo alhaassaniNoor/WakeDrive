@@ -21,6 +21,9 @@ class ConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
     @Published var triggerWatchReset = false
     @Published var isSessionActivated: Bool = false
     
+    // 🚨 ADDED: Holds the live GPS speed sent down from the iPhone
+    @Published var currentSpeedKMH: Int = 0
+    
     #if os(iOS)
     @Published var isWatchAppInstalled: Bool = false
     @Published var newlyCompletedTripData: TripSummaryData?
@@ -41,7 +44,6 @@ class ConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
     }
     
     func sendDriveStatus(isStarting: Bool) {
-        // 🚨 THE FIX: Stamp the exact second this message was created
         let msg: [String: Any] = [
             "isDriving": isStarting,
             "timestamp": Date().timeIntervalSince1970
@@ -65,6 +67,7 @@ class ConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
                 AlertManager.shared.stopAllAlerts()
                 #endif
                 self.currentSleepScore = 0
+                self.currentSpeedKMH = 0
             }
         }
         
@@ -83,6 +86,14 @@ class ConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
         try? WCSession.default.updateApplicationContext(msg)
     }
     
+    // 🚨 ADDED: iPhone uses this function to push the GPS speed to the Watch
+    #if os(iOS)
+    func sendSpeedToWatch(speed: Int) {
+        let msg: [String: Any] = ["liveSpeedKMH": speed]
+        try? WCSession.default.updateApplicationContext(msg)
+    }
+    #endif
+    
     func sendCommand(_ command: String) {
         let msg = ["command": command]
         if WCSession.default.isReachable {
@@ -98,6 +109,7 @@ class ConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
         sendCommand("resetAwake")
         DispatchQueue.main.async {
             self.currentSleepScore = 0
+            self.currentSpeedKMH = 0
             #if os(iOS)
             AlertManager.shared.stopAllAlerts()
             #endif
@@ -115,7 +127,6 @@ class ConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
     }
     
     private func saveTrip() {
-        // 🚨 BAND-AID REMOVED: Short test trips will perfectly save again.
         guard let start = tripStartDate else { return }
         let durationMinutes = max(1, Int(Date().timeIntervalSince(start) / 60))
         
@@ -148,11 +159,8 @@ class ConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
     private func handleIncoming(_ dict: [String: Any]) {
         DispatchQueue.main.async {
             if let drivingStatus = dict["isDriving"] as? Bool {
-                
-                // 🚨 THE FIX: Ignore stale messages from the queue
                 if let timestamp = dict["timestamp"] as? TimeInterval {
                     let messageAge = Date().timeIntervalSince1970 - timestamp
-                    // If the "Start" message is more than 5 minutes old (300 seconds), it's a ghost. Burn it.
                     if messageAge > 300 && drivingStatus == true {
                         print("Burned a ghost trip message from \(messageAge) seconds ago.")
                         return
@@ -175,6 +183,14 @@ class ConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
                 self.isDriving = drivingStatus
             }
             
+            // 🚨 ADDED: Watch OS listener catches the speed from the iPhone
+            #if os(watchOS)
+            if let speed = dict["liveSpeedKMH"] as? Int {
+                self.currentSpeedKMH = speed
+            }
+            #endif
+            
+            // 🚨 UNTOUCHED: Your vital HR logging remains perfectly intact
             if let hr = dict["heartRate"] as? Double {
                 self.currentHeartRate = hr
                 #if os(iOS)
@@ -195,6 +211,7 @@ class ConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
             if let cmd = dict["command"] as? String {
                 if cmd == "resetAwake" {
                     self.currentSleepScore = 0
+                    self.currentSpeedKMH = 0
                     self.triggerWatchReset = true
                     #if os(iOS)
                     AlertManager.shared.stopAllAlerts()

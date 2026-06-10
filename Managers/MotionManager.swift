@@ -20,6 +20,9 @@ class MotionManager: ObservableObject {
     private var activeStage = 0
     private var shakeBuffer: [Double] = []
     
+    // 🚨 ADDED: 120-Second Rolling Baseline Array
+    private var hrHistory: [Double] = []
+    
     func startTracking() {
         stopTracking()
         guard motionManager.isDeviceMotionAvailable else { return }
@@ -29,6 +32,7 @@ class MotionManager: ObservableObject {
         lastMovementTime = Date()
         activeStage = 0
         shakeBuffer.removeAll()
+        hrHistory.removeAll()
         
         startWorkoutSession()
         startHeartRateQuery()
@@ -61,6 +65,7 @@ class MotionManager: ObservableObject {
         isStill = false
         motionDangerScore = 0
         shakeBuffer.removeAll()
+        hrHistory.removeAll()
         updateScore(to: 0)
     }
     
@@ -91,29 +96,48 @@ class MotionManager: ObservableObject {
         }
     }
     
+    // 🚨 ENHANCED: Professional HR Drop, Stillness, and Speed Multiplier
     private func evaluateRealData() {
         let secondsSinceLastMove = Date().timeIntervalSince(lastMovementTime)
-        var scoreIncrement = 0
         
+        // 1. Maintain the Live Baseline (120 seconds of actual driving HR)
+        if currentBPM > 0 {
+            hrHistory.append(currentBPM)
+            if hrHistory.count > 120 { hrHistory.removeFirst() }
+        }
+        let rollingAvgHR = hrHistory.isEmpty ? currentBPM : hrHistory.reduce(0, +) / Double(hrHistory.count)
+        
+        var baseIncrement = 0.0
+        
+        // 2. Stillness Penalty (Boosted to +2.0 for realistic sleep timing)
         if secondsSinceLastMove > 8.0 {
-            scoreIncrement += 1
+            baseIncrement += 2.0
             isStill = true
         } else {
             isStill = false
         }
         
-        if currentBPM > 0 && currentBPM < 65.0 {
-            scoreIncrement += 1
+        // 3. Heart Rate Drop Penalty (If it drops 10% below live baseline, add +3.0)
+        if currentBPM > 0 && currentBPM < (rollingAvgHR * 0.90) {
+            baseIncrement += 3.0
         }
         
-        if scoreIncrement > 0 {
+        // 4. Import Speed & Apply Your Friend's Multiplier
+        let speed = ConnectivityManager.shared.currentSpeedKMH
+        let speedMultiplier = 1.0 + (Double(speed) / 120.0)
+        
+        // 5. Final Calculation
+        let finalIncrement = Int(baseIncrement * speedMultiplier)
+        
+        if finalIncrement > 0 {
             if hapticTimer == nil || activeStage == 3 {
-                updateScore(to: min(100, motionDangerScore + scoreIncrement))
+                updateScore(to: min(100, motionDangerScore + finalIncrement))
             }
         }
         manageStages()
     }
     
+    // 🚨 UNTOUCHED: Stages and Haptics
     private func manageStages() {
         let targetStage: Int
         if motionDangerScore >= 90 { targetStage = 3 }
@@ -163,6 +187,7 @@ class MotionManager: ObservableObject {
     private func updateScore(to newScore: Int) {
         DispatchQueue.main.async {
             self.motionDangerScore = newScore
+            // 🚨 UNTOUCHED: Telemetry perfectly sent to phone for the Summary View
             ConnectivityManager.shared.sendTelemetry(score: newScore, hr: self.currentBPM, still: self.isStill)
         }
     }
@@ -195,7 +220,7 @@ class MotionManager: ObservableObject {
             DispatchQueue.main.async {
                 guard let self = self else { return }
                 self.currentBPM = bpm
-                // 🚨 THE FIX: Push the data to the phone immediately every time we get a new reading
+                // 🚨 UNTOUCHED: Live pushing to the phone exactly as you designed
                 ConnectivityManager.shared.sendTelemetry(score: self.motionDangerScore, hr: bpm, still: self.isStill)
             }
         }
