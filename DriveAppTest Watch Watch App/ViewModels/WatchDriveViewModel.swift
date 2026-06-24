@@ -33,7 +33,9 @@ class WatchDriveViewModel: ObservableObject {
         
         connectivity.$triggerWatchReset.receive(on: DispatchQueue.main).sink { [weak self] shouldReset in
             if shouldReset {
-                self?.motionManager.resetDemo()
+                // 🚨 FIXED: Replaced the deleted resetDemo() with a clean restart
+                self?.motionManager.stopTracking()
+                self?.motionManager.startTracking()
                 self?.connectivity.triggerWatchReset = false
             }
         }.store(in: &cancellables)

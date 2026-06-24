@@ -1,4 +1,6 @@
 import SwiftUI
+import Combine
+import WatchKit
 
 // MARK: - Hex Color Extension
 extension Color {
@@ -170,6 +172,9 @@ struct BirdDot: View {
 struct WatchLiveDashboard: View {
     @ObservedObject var viewModel: WatchDriveViewModel
     
+    // 🚨 ADDED: Connect to the master source of truth for the speed
+    @StateObject private var connectivity = ConnectivityManager.shared
+    
     var stageColor: Color {
         if viewModel.currentScore >= 90 { return Color(hex: "D20A0A") }
         if viewModel.currentScore >= 70 { return Color(hex: "FF8104") }
@@ -206,10 +211,12 @@ struct WatchLiveDashboard: View {
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundColor(Color(hex: "247FA6"))
                         HStack(alignment: .lastTextBaseline, spacing: 2) {
-                            Text("0")
+                            // 🚨 FIXED: Now pulls live speed instead of hardcoded "0"
+                            Text("\(connectivity.currentSpeedKMH)")
                                 .font(.system(size: 22, weight: .bold))
                                 .foregroundColor(.white)
-                            Text("km")
+                            // 🚨 FIXED: Updated unit label to km/h
+                            Text("km/h")
                                 .font(.system(size: 12, weight: .regular))
                                 .foregroundColor(.gray)
                         }

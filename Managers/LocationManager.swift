@@ -33,6 +33,9 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         DispatchQueue.main.async {
             self.currentSpeed = calculatedSpeed
             
+            // 🚨 FIXED: Now continuously pushes the live speed to the Apple Watch math engine
+            ConnectivityManager.shared.sendSpeedToWatch(speed: calculatedSpeed)
+            
             if ConnectivityManager.shared.isDriving {
                 ConnectivityManager.shared.addSpeedReading(calculatedSpeed)
             }

@@ -15,10 +15,10 @@ class HealthManager: ObservableObject {
         }
         
         let heartRateType = HKObjectType.quantityType(forIdentifier: .heartRate)!
-        let hrvType = HKObjectType.quantityType(forIdentifier: .heartRateVariabilitySDNN)!
         let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis)!
         
-        let typesToRead: Set = [heartRateType, hrvType, sleepType]
+        // 🚨 FIXED: Removed the impossible HRV request to clear App Store guidelines
+        let typesToRead: Set = [heartRateType, sleepType]
         
         healthStore.requestAuthorization(toShare: nil, read: typesToRead) { success, error in
             DispatchQueue.main.async {

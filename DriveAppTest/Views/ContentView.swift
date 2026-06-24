@@ -279,6 +279,7 @@ struct WatchSetupView: View {
         }
     }
 }
+
 // MARK: - Main Home Dashboard
 struct HomeView: View {
     @AppStorage("userName") var userName: String = ""
@@ -459,7 +460,11 @@ struct HomeView: View {
             .navigationBarHidden(true)
             .sheet(isPresented: $showProfileEdit) { EditProfileView() }
             .sheet(isPresented: $showInfoSheet) { InfoSheetView() }
-            .onAppear { sleepManager.fetchSleepData() }
+            .onAppear {
+                sleepManager.fetchSleepData()
+                // 🚨 FIXED: Initiates the background monitoring so the Smart Notification actually fires
+                AutoStartManager.shared.startMonitoring()
+            }
             .onChange(of: connectivity.newlyCompletedTripData) { oldValue, newValue in
                 if let data = newValue {
                     let newTrip = Trip(
@@ -604,6 +609,7 @@ struct EditProfileView: View {
         .preferredColorScheme(.dark)
     }
 }
+
 // MARK: - Summary Screen
 struct SummaryView: View {
     @Environment(\.presentationMode) var presentationMode
@@ -790,6 +796,7 @@ struct SummaryView: View {
             return 4 + (CGFloat(avgRisk) / 100.0 * 130)
         }
     }
+
 // MARK: - Trip Row
 struct DailyTripRow: View {
     let tripNum: String
@@ -864,6 +871,7 @@ struct DailyTripRow: View {
         .cornerRadius(15)
     }
 }
+
 // MARK: - How It Works (Info Sheet)
 struct InfoSheetView: View {
     @Environment(\.presentationMode) var presentationMode
@@ -907,6 +915,20 @@ struct InfoSheetView: View {
                             score: "Score: 90 - 100",
                             desc: "Continuous loop: 25 seconds of heavy vibration followed by an urgent voice command to pull over. This locks the system and can ONLY be dismissed by vigorously shaking your wrist, dropping your risk score by 50 points."
                         )
+                        
+                        // 🚨 PRO TIP ADDED HERE
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("Battery Life Tip")
+                                .font(.headline)
+                                .foregroundColor(Color(hex: "247FA6"))
+                            Text("Copirrot performs high-frequency health monitoring to keep you safe. For road trips longer than 6 hours, we recommend a quick 15-minute top-up charge while you take a break. This ensures your Watch remains in high-precision mode for the duration of your journey.")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                        }
+                        .padding(15)
+                        .background(Color(hex: "1C1C1E"))
+                        .cornerRadius(15)
+                        .padding(.top, 10)
                     }
                     .padding(25)
                 }

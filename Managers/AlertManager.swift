@@ -5,17 +5,19 @@ class AlertManager {
     static let shared = AlertManager()
     private let synthesizer = AVSpeechSynthesizer()
     
-    // 🚨 Wakes up the speakers when the drive starts so it works when the screen is off
+    // 🚨 Ensures the system gives your app priority over music/podcasts
     func wakeUpAudioSystem() {
         do {
-            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .voicePrompt, options: [.duckOthers, .interruptSpokenAudioAndMixWithOthers])
+            // Updated to use .mixWithOthers but with aggressive ducking so we are heard
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [.duckOthers, .mixWithOthers])
             try AVAudioSession.sharedInstance().setActive(true, options: .notifyOthersOnDeactivation)
             
+            // "Pre-warm" the speech synthesizer
             let silentUtterance = AVSpeechUtterance(string: " ")
-            silentUtterance.volume = 0.01
+            silentUtterance.volume = 0.0
             synthesizer.speak(silentUtterance)
         } catch {
-            print("Failed to hijack audio session.")
+            print("Failed to initialize audio session: \(error)")
         }
     }
     
@@ -34,23 +36,30 @@ class AlertManager {
         stopAllAlerts()
         let name = UserDefaults.standard.string(forKey: "userName") ?? "Driver"
         let phrases = [
-            "\(name), consider pulling over safely.",
-            "\(name), you seem very tired, take a break."
+            "Attention \(name), you are at high risk. Please pull over safely.",
+            "Warning \(name), you are showing signs of exhaustion. Pull over now."
         ]
         speak(phrases.randomElement()!)
     }
     
     func stopAllAlerts() {
-        synthesizer.stopSpeaking(at: .immediate)
+        if synthesizer.isSpeaking {
+            synthesizer.stopSpeaking(at: .immediate)
+        }
     }
     
     private func speak(_ text: String) {
-        do { try AVAudioSession.sharedInstance().setActive(true) } catch {}
+        // Ensure the session is still active before speaking
+        try? AVAudioSession.sharedInstance().setActive(true)
         
         let utterance = AVSpeechUtterance(string: text)
+        // Set to English US with a slightly faster rate for urgency
         utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
-        utterance.rate = 0.5
+        utterance.rate = 0.52
         utterance.volume = 1.0
+        
+        // 🚨 FIXED: Changed from prefersAssistivePitch to pitchMultiplier
+        utterance.pitchMultiplier = 1.2 // A slightly higher pitch cuts through road noise better
         
         synthesizer.speak(utterance)
     }
